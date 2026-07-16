@@ -7,8 +7,89 @@ from photo_enhance.cli import main
 
 
 def _write_test_image(path) -> None:
-    img = np.full((16, 16, 3), 120, dtype=np.uint8)
+    x = np.linspace(20, 220, 16, dtype=np.uint8)
+    img = np.dstack(
+        [
+            np.tile(x, (16, 1)),
+            np.full((16, 16), 100, dtype=np.uint8),
+            np.tile(x[:, np.newaxis], (1, 16)),
+        ]
+    )
     cv2.imwrite(str(path), img)
+
+
+def test_single_file_uses_default_output_name(tmp_path):
+    photo = tmp_path / "photo.jpg"
+    _write_test_image(photo)
+
+    result = CliRunner().invoke(main, [str(photo)])
+
+    output = tmp_path / "photo_enhanced.jpg"
+    assert result.exit_code == 0
+    assert f"OK   photo.jpg -> {output}" in result.output
+    assert output.is_file()
+
+
+def test_single_file_writes_custom_output(tmp_path):
+    photo = tmp_path / "photo.jpg"
+    output = tmp_path / "custom.webp"
+    _write_test_image(photo)
+
+    result = CliRunner().invoke(main, [str(photo), "-o", str(output), "--quality", "83"])
+
+    assert result.exit_code == 0
+    assert output.is_file()
+    with Image.open(output) as saved:
+        assert saved.format == "WEBP"
+
+
+def test_single_file_applies_selected_preset(tmp_path):
+    photo = tmp_path / "photo.jpg"
+    plain_output = tmp_path / "plain.png"
+    preset_output = tmp_path / "preset.png"
+    _write_test_image(photo)
+
+    runner = CliRunner()
+    plain = runner.invoke(main, [str(photo), "-o", str(plain_output)])
+    preset = runner.invoke(
+        main,
+        [str(photo), "-o", str(preset_output), "--preset", "high_contrast_bw"],
+    )
+
+    assert plain.exit_code == 0
+    assert preset.exit_code == 0
+    plain_pixels = cv2.imread(str(plain_output))
+    preset_pixels = cv2.imread(str(preset_output))
+    assert not np.array_equal(plain_pixels, preset_pixels)
+    assert np.array_equal(preset_pixels[..., 0], preset_pixels[..., 1])
+    assert np.array_equal(preset_pixels[..., 1], preset_pixels[..., 2])
+
+
+def test_missing_input_path_is_rejected_by_click(tmp_path):
+    missing = tmp_path / "missing.jpg"
+
+    result = CliRunner().invoke(main, [str(missing)])
+
+    assert result.exit_code == 2
+    assert "Path" in result.output
+    assert "does not exist" in result.output
+
+
+def test_folder_requires_batch_flag(tmp_path):
+    result = CliRunner().invoke(main, [str(tmp_path)])
+
+    assert result.exit_code == 2
+    assert "INPUT_PATH must be a file" in result.output
+
+
+def test_batch_requires_folder_input(tmp_path):
+    photo = tmp_path / "photo.jpg"
+    _write_test_image(photo)
+
+    result = CliRunner().invoke(main, [str(photo), "--batch"])
+
+    assert result.exit_code == 2
+    assert "--batch requires INPUT_PATH to be a folder" in result.output
 
 
 def test_single_file_refuses_to_overwrite_input_by_default(tmp_path):

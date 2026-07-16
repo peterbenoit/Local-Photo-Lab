@@ -2,6 +2,14 @@
 
 All notable changes to this project are logged here, newest first.
 
+## 2026-07-16 — CLI path and image-format coverage
+
+- Added Click-runner regressions for default and custom output paths, preset
+  selection, missing inputs, and incorrect file/folder mode combinations.
+- Confirmed each advertised image extension through the existing parameterized
+  BGR `uint8` save/load round-trip coverage and reconciled both completed P1
+  items in the project backlog. The suite now has 84 tests.
+
 ## 2026-07-16 — Lean session URLs and refresh restoration
 
 - Replaced base64 preview data inside JSON with private, no-store session image
