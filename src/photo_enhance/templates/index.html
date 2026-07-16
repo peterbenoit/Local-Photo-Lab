@@ -189,7 +189,7 @@
   <main id="main">
     <h1>Photo Auto-Enhance</h1>
     <p class="hint" id="upload-hint">Runs on localhost with debug mode off by default. Nothing leaves this machine. Upload once, then change the preset or its intensity without re-uploading.</p>
-    <p class="hint">The last 20 uploads are held temporarily in memory and cleared when the server restarts. Previews are 8-bit JPEGs without source metadata. Transparent and high-bit-depth images are rejected rather than silently losing data.</p>
+    <p class="hint">The last 20 uploads are held temporarily in memory and cleared when the server restarts. An opaque session ID in the address bar restores the current result after refresh while that session exists. Previews are 8-bit JPEGs without source metadata.</p>
 
     <form id="upload-form">
       <fieldset class="upload-dropzone" id="upload-dropzone">
@@ -332,9 +332,59 @@
       detailOutputFormat.textContent = details.output_format;
       detailFilter.textContent = selectedFilterName();
       detailProcessingTime.textContent = `${details.processing_ms} ms`;
-      downloadLink.href = data.after;
+      downloadLink.href = data.download_url;
       downloadLink.download = data.download_name;
       downloadLink.hidden = false;
+    }
+
+    function updateSessionUrl(id) {
+      const url = new URL(window.location.href);
+      if (id) {
+        url.searchParams.set("session", id);
+      } else {
+        url.searchParams.delete("session");
+      }
+      window.history.replaceState(null, "", url);
+    }
+
+    function renderSession(data, moveFocus = false) {
+      sessionId = data.session_id;
+      applyRequestToken = Math.max(applyRequestToken, Number(data.revision) || 0);
+      beforeImg.src = data.before;
+      afterImg.src = data.after;
+      comparisonBeforeImg.src = data.before;
+      comparisonAfterImg.src = data.after;
+      presetSelect.value = data.preset || "";
+      intensitySlider.value = data.intensity ?? 100;
+      intensityValue.textContent = `${intensitySlider.value}%`;
+      afterCaption.textContent = data.preset
+        ? `After — ${presetSelect.options[presetSelect.selectedIndex].text}`
+        : "After";
+      results.hidden = false;
+      controls.disabled = false;
+      comparisonRange.value = 50;
+      updateComparisonPosition();
+      updatePresetDescription();
+      updateResult(data);
+      if (moveFocus) resultsHeading.focus();
+    }
+
+    async function restoreSession() {
+      const savedSessionId = new URL(window.location.href).searchParams.get("session");
+      if (!savedSessionId) return;
+      setStatus("Restoring previous result…");
+      try {
+        const response = await fetch(`/sessions/${encodeURIComponent(savedSessionId)}`);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Previous result expired.");
+        if (uploadInProgress || (sessionId && sessionId !== savedSessionId)) return;
+        renderSession(data);
+        setStatus("Previous result restored.");
+      } catch (_error) {
+        if (sessionId && sessionId !== savedSessionId) return;
+        updateSessionUrl(null);
+        setStatus("Previous result expired. Upload the photo again.");
+      }
     }
 
     function updateComparisonPosition() {
@@ -374,23 +424,9 @@
         if (!response.ok) {
           throw new Error(data.error || "Upload failed.");
         }
-        sessionId = data.session_id;
-        beforeImg.src = data.before;
-        afterImg.src = data.after;
-        comparisonBeforeImg.src = data.before;
-        comparisonAfterImg.src = data.after;
-        afterCaption.textContent = "After";
-        results.hidden = false;
-        controls.disabled = false;
-        presetSelect.value = "";
-        intensitySlider.value = 100;
-        intensityValue.textContent = "100%";
-        comparisonRange.value = 50;
-        updateComparisonPosition();
-        updatePresetDescription();
-        updateResult(data);
+        renderSession(data, true);
+        updateSessionUrl(data.session_id);
         setStatus("Done. Try a filter below.");
-        resultsHeading.focus();
       } catch (err) {
         showError(err.message, true);
         setStatus("");
@@ -415,7 +451,7 @@
         const response = await fetch("/apply", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ session_id: sessionId, preset, intensity }),
+          body: JSON.stringify({ session_id: sessionId, preset, intensity, revision: token }),
         });
         const data = await response.json();
         if (token !== applyRequestToken) return; // a newer request superseded this one
@@ -485,6 +521,7 @@
     comparisonControls.hidden = false;
     setComparisonView("slider");
     updateComparisonPosition();
+    restoreSession();
 
     presetSelect.addEventListener("change", () => {
       updatePresetDescription();

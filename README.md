@@ -52,6 +52,12 @@ Photos can be selected with the native file input or dropped onto the upload
 area. Results default to a draggable before/after reveal; use its native range
 control with touch, pointer, or arrow keys, or switch to the side-by-side view.
 
+Preview images and downloads use short-lived, private in-memory URLs instead of
+being embedded as base64 inside JSON responses. The current opaque session ID is
+kept in the address bar, so refreshing restores the photo, chosen filter, and
+intensity while the server still holds that session. Results expire when evicted
+from the 20-session limit or when the server restarts.
+
 By default the Flask dev server runs with debug off. For local debugging,
 set `PHOTO_ENHANCE_DEBUG=1` before starting it.
 

@@ -2,6 +2,24 @@
 
 All notable changes to this project are logged here, newest first.
 
+## 2026-07-16 — Lean session URLs and refresh restoration
+
+- Replaced base64 preview data inside JSON with private, no-store session image
+  URLs. A measured 1600×1200 upload response fell from 4,538,264 bytes to 536
+  bytes—a 99.99% reduction—while the JPEGs transfer as normal image resources.
+- Session memory now retains the base enhanced array plus encoded before/current
+  previews instead of both full image arrays and transient base64 strings.
+- Downloads use the same short-lived result resource with a server-provided
+  attachment filename and `nosniff` response protection.
+- The opaque session ID is stored in the page URL. Refreshing restores the
+  original/current previews, selected filter, intensity, details, and download
+  while the in-memory session still exists; expired sessions degrade to a clear
+  status and remove the stale URL parameter.
+- Filter requests carry monotonic revisions. A slower, older request receives
+  `409` and cannot replace a newer result; superseded image URLs also expire.
+- Added transport-size, image response, download header, refresh state,
+  expiration, and stale-revision regressions. The suite now has 78 tests.
+
 ## 2026-07-16 — Drag-and-drop and interactive comparison
 
 - Added file drag-and-drop as progressive enhancement over the unchanged native

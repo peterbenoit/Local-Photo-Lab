@@ -59,6 +59,9 @@ def test_index_has_progressive_dropzone_and_keyboard_comparison_controls():
     assert 'id="side-by-side-view"' in text
     assert 'uploadDropzone.addEventListener("drop"' in text
     assert 'comparisonRange.addEventListener("input"' in text
+    assert "async function restoreSession()" in text
+    assert 'url.searchParams.set("session", id)' in text
+    assert "revision: token" in text
 
 
 def test_upload_without_file_returns_400():
@@ -119,8 +122,11 @@ def test_upload_returns_session_id_and_images():
     assert resp.status_code == 200
     body = resp.get_json()
     assert body["session_id"]
-    assert body["before"].startswith("data:image/jpeg;base64,")
-    assert body["after"].startswith("data:image/jpeg;base64,")
+    assert body["before"].startswith(f"/sessions/{body['session_id']}/images/before")
+    assert body["after"].startswith(f"/sessions/{body['session_id']}/images/result?v=")
+    assert body["download_url"].endswith("&download=1")
+    assert b"base64" not in resp.data
+    assert len(resp.data) < 2_000
     assert body["download_name"] == "photo_enhanced.jpg"
     assert body["details"]["height"] == 16
     assert body["details"]["width"] == 16
@@ -162,7 +168,7 @@ def test_upload_encoding_failure_returns_friendly_error(monkeypatch):
     def fail_encoding(_image):
         raise ValueError("simulated encoding failure")
 
-    monkeypatch.setattr(web, "_bgr_to_data_uri", fail_encoding)
+    monkeypatch.setattr(web, "_bgr_to_jpeg_bytes", fail_encoding)
     client = app.test_client()
     resp = client.post(
         "/upload",
@@ -190,7 +196,7 @@ def test_apply_with_valid_session_and_preset_returns_image():
     resp = client.post("/apply", json={"session_id": session_id, "preset": "warm_film", "intensity": 50})
     assert resp.status_code == 200
     body = resp.get_json()
-    assert body["after"].startswith("data:image/jpeg;base64,")
+    assert body["after"].startswith(f"/sessions/{session_id}/images/result?v=")
     assert body["download_name"] == "photo_enhanced_warm_film.jpg"
     assert body["details"]["source_format"] == "JPEG"
     assert body["details"]["width"] == 16
@@ -216,4 +222,104 @@ def test_apply_without_preset_returns_base_enhanced_image():
 
     resp = client.post("/apply", json={"session_id": session_id, "preset": "", "intensity": 100})
     assert resp.status_code == 200
-    assert resp.get_json()["after"].startswith("data:image/jpeg;base64,")
+    assert resp.get_json()["after"].startswith(f"/sessions/{session_id}/images/result?v=")
+
+
+def test_session_image_urls_serve_jpeg_and_download_headers():
+    client = app.test_client()
+    upload = client.post(
+        "/upload",
+        data={"photo": (io.BytesIO(_jpeg_bytes()), "family photo.jpg")},
+        content_type="multipart/form-data",
+    ).get_json()
+
+    before = client.get(upload["before"])
+    result = client.get(upload["after"])
+    download = client.get(upload["download_url"])
+
+    assert before.status_code == 200
+    assert result.status_code == 200
+    assert before.content_type == "image/jpeg"
+    assert result.data.startswith(b"\xff\xd8")
+    assert result.headers["Cache-Control"] == "private, no-store"
+    assert result.headers["X-Content-Type-Options"] == "nosniff"
+    assert "attachment" in download.headers["Content-Disposition"]
+    assert "family_photo_enhanced.jpg" in download.headers["Content-Disposition"]
+
+
+def test_superseded_result_url_expires_after_filter_change():
+    client = app.test_client()
+    upload = client.post(
+        "/upload",
+        data={"photo": (io.BytesIO(_jpeg_bytes()), "photo.jpg")},
+        content_type="multipart/form-data",
+    ).get_json()
+    old_result_url = upload["after"]
+
+    applied = client.post(
+        "/apply",
+        json={"session_id": upload["session_id"], "preset": "warm_film", "revision": 1},
+    ).get_json()
+
+    assert client.get(old_result_url).status_code == 404
+    assert client.get(applied["after"]).status_code == 200
+
+
+def test_session_state_restores_current_filter_and_intensity():
+    client = app.test_client()
+    upload = client.post(
+        "/upload",
+        data={"photo": (io.BytesIO(_jpeg_bytes()), "photo.jpg")},
+        content_type="multipart/form-data",
+    ).get_json()
+    session_id = upload["session_id"]
+    applied = client.post(
+        "/apply",
+        json={
+            "session_id": session_id,
+            "preset": "warm_film",
+            "intensity": 35,
+            "revision": 4,
+        },
+    )
+
+    restored = client.get(f"/sessions/{session_id}")
+
+    assert applied.status_code == 200
+    assert restored.status_code == 200
+    body = restored.get_json()
+    assert body["preset"] == "warm_film"
+    assert body["intensity"] == 35
+    assert body["revision"] == 4
+    assert body["after"] == applied.get_json()["after"]
+
+
+def test_older_filter_revision_cannot_replace_newer_result():
+    client = app.test_client()
+    upload = client.post(
+        "/upload",
+        data={"photo": (io.BytesIO(_jpeg_bytes()), "photo.jpg")},
+        content_type="multipart/form-data",
+    ).get_json()
+    session_id = upload["session_id"]
+
+    newer = client.post(
+        "/apply",
+        json={"session_id": session_id, "preset": "warm_film", "intensity": 80, "revision": 5},
+    )
+    older = client.post(
+        "/apply",
+        json={"session_id": session_id, "preset": "cool_moody", "intensity": 20, "revision": 4},
+    )
+
+    assert newer.status_code == 200
+    assert older.status_code == 409
+    assert older.get_json()["stale"] is True
+    assert client.get(f"/sessions/{session_id}").get_json()["preset"] == "warm_film"
+
+
+def test_missing_session_state_and_image_return_404():
+    client = app.test_client()
+
+    assert client.get("/sessions/not-real").status_code == 404
+    assert client.get("/sessions/not-real/images/result").status_code == 404

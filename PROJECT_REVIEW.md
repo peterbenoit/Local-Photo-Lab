@@ -85,9 +85,9 @@ P2 improves product quality; P3 contains larger, optional capabilities.
 - [x] Add a draggable before/after comparison slider while retaining a keyboard-accessible side-by-side mode.
 - [x] Add drag-and-drop as a progressive enhancement without removing the native file input.
 - [x] Show image dimensions, output format, preset, and processing time with the result.
-- [ ] Avoid embedding two large base64 images directly in the HTML; use short-lived in-memory result URLs or browser-side object URLs with explicit cleanup.
+- [x] Avoid embedding two large base64 images directly in the HTML; use short-lived in-memory result URLs or browser-side object URLs with explicit cleanup.
 - [x] Prevent accidental duplicate submissions and show a processing state for large photos.
-- [ ] Preserve results across refresh using a redirect-after-post or a clearly documented ephemeral-result model.
+- [x] Preserve results across refresh using a redirect-after-post or a clearly documented ephemeral-result model.
 - [x] Add a short privacy note explaining localhost scope, metadata handling, temporary memory use, and that debug mode must remain disabled.
 
 ## P1 — Strengthen CLI usability
