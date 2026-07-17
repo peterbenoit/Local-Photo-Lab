@@ -239,7 +239,6 @@
       opacity: 0;
     }
     .filter-card {
-      min-height: 104px;
       padding: 0.55rem;
       display: flex;
       flex-direction: column;
@@ -259,7 +258,9 @@
       outline-offset: 3px;
     }
     .filter-swatch {
-      height: 46px;
+      display: block;
+      aspect-ratio: 4 / 3;
+      overflow: hidden;
       border-radius: 5px;
       background: linear-gradient(135deg, var(--swatch-start), var(--swatch-end));
       box-shadow: inset 0 0 0 1px rgb(255 255 255 / 10%);
@@ -268,6 +269,15 @@
       position: relative;
       background: linear-gradient(135deg, #21272b 0 48%, #d5d8d7 48% 52%, #465d67 52%);
     }
+    .filter-preview {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      object-position: center 38%;
+      opacity: 0;
+    }
+    .filter-preview.is-ready { opacity: 1; }
     .filter-name { font-size: 0.78rem; font-weight: 700; line-height: 1.2; }
     .intensity-control {
       margin-top: 1rem;
@@ -519,7 +529,9 @@
           <div class="filter-option">
             <input class="filter-radio" type="radio" name="preset" id="preset-auto" value="" checked>
             <label class="filter-card" for="preset-auto">
-              <span class="filter-swatch filter-swatch-auto" aria-hidden="true"></span>
+              <span class="filter-swatch filter-swatch-auto" aria-hidden="true">
+                <img class="filter-preview" data-preset="auto" alt="">
+              </span>
               <span class="filter-name">Auto</span>
             </label>
           </div>
@@ -527,7 +539,9 @@
             <div class="filter-option">
               <input class="filter-radio" type="radio" name="preset" id="preset-{{ preset.id }}" value="{{ preset.id }}">
               <label class="filter-card" for="preset-{{ preset.id }}">
-                <span class="filter-swatch" style="--swatch-start: {{ preset.swatch[0] }}; --swatch-end: {{ preset.swatch[1] }}" aria-hidden="true"></span>
+                <span class="filter-swatch" style="--swatch-start: {{ preset.swatch[0] }}; --swatch-end: {{ preset.swatch[1] }}" aria-hidden="true">
+                  <img class="filter-preview" data-preset="{{ preset.id }}" alt="">
+                </span>
                 <span class="filter-name">{{ preset.name }}</span>
               </label>
             </div>
@@ -599,6 +613,7 @@
     const editorShell = document.getElementById("editor-shell");
     const controls = document.getElementById("controls");
     const presetRadios = Array.from(document.querySelectorAll('input[name="preset"]'));
+    const filterPreviews = Array.from(document.querySelectorAll(".filter-preview"));
     const intensitySlider = document.getElementById("intensity-slider");
     const intensityValue = document.getElementById("intensity-value");
     const presetDescription = document.getElementById("preset-description");
@@ -679,6 +694,14 @@
       window.history.replaceState(null, "", url);
     }
 
+    function updateFilterPreviews(id) {
+      filterPreviews.forEach((preview) => {
+        preview.classList.remove("is-ready");
+        preview.addEventListener("load", () => preview.classList.add("is-ready"), { once: true });
+        preview.src = `/sessions/${encodeURIComponent(id)}/presets/${encodeURIComponent(preview.dataset.preset)}/thumbnail`;
+      });
+    }
+
     function renderSession(data, moveFocus = false) {
       sessionId = data.session_id;
       applyRequestToken = Math.max(applyRequestToken, Number(data.revision) || 0);
@@ -698,6 +721,7 @@
       editorShell.hidden = false;
       controls.disabled = false;
       document.body.classList.add("has-results");
+      updateFilterPreviews(sessionId);
       comparisonRange.value = 50;
       updateComparisonPosition();
       updatePresetDescription();

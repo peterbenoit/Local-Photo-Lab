@@ -259,6 +259,28 @@ def test_session_image_urls_serve_jpeg_and_download_headers():
     assert "family_photo_enhanced.jpg" in download.headers["Content-Disposition"]
 
 
+def test_session_filter_thumbnails_render_auto_and_preset_looks():
+    client = app.test_client()
+    upload = client.post(
+        "/upload",
+        data={"photo": (io.BytesIO(_jpeg_bytes()), "photo.jpg")},
+        content_type="multipart/form-data",
+    ).get_json()
+    session_id = upload["session_id"]
+
+    auto = client.get(f"/sessions/{session_id}/presets/auto/thumbnail")
+    filtered = client.get(f"/sessions/{session_id}/presets/teal_ember/thumbnail")
+    unknown = client.get(f"/sessions/{session_id}/presets/not-real/thumbnail")
+
+    assert auto.status_code == 200
+    assert filtered.status_code == 200
+    assert auto.content_type == "image/jpeg"
+    assert filtered.data.startswith(b"\xff\xd8")
+    assert filtered.data != auto.data
+    assert filtered.headers["Cache-Control"] == "private, no-store"
+    assert unknown.status_code == 404
+
+
 def test_superseded_result_url_expires_after_filter_change():
     client = app.test_client()
     upload = client.post(

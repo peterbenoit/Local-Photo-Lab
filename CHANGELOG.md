@@ -2,6 +2,17 @@
 
 All notable changes to this project are logged here, newest first.
 
+## 2026-07-17 — Photo-based filter contact sheet
+
+- Filter swatches now fill with real, per-photo previews after upload or session
+  restoration, making the eight looks directly comparable before selection.
+- Changed thumbnail frames from shallow panoramic strips to 4:3 mini-prints
+  with a subject-friendly upper-center crop, especially improving portraits.
+- Preview rendering grades only a 320-pixel downsample and leaves the existing
+  full-resolution apply/download path unchanged.
+- Thumbnail resources remain private, metadata-free, and tied to the same
+  short-lived in-memory session as the main result.
+
 ## 2026-07-17 — One-step photo selection
 
 - Choosing a photo from the native file picker now starts enhancement

@@ -33,6 +33,7 @@ MAX_UPLOAD_BYTES = 20 * 1024 * 1024  # 20MB
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
 MAX_DECODED_PIXELS = 40_000_000
 MAX_IMAGE_DIMENSION = 12_000
+FILTER_THUMBNAIL_MAX_DIMENSION = 320
 
 MAX_SESSIONS = 20
 _sessions: "OrderedDict[str, dict]" = OrderedDict()
@@ -83,6 +84,24 @@ def _bgr_to_jpeg_bytes(img_bgr: np.ndarray) -> bytes:
     if not ok:
         raise ValueError("Failed to encode image")
     return buf.tobytes()
+
+
+def _filter_thumbnail(enhanced: np.ndarray, preset_name: str | None) -> bytes:
+    """Render a small representative preview without grading the full image again."""
+    height, width = enhanced.shape[:2]
+    scale = min(1.0, FILTER_THUMBNAIL_MAX_DIMENSION / max(height, width))
+    if scale < 1.0:
+        thumbnail = cv2.resize(
+            enhanced,
+            (max(1, round(width * scale)), max(1, round(height * scale))),
+            interpolation=cv2.INTER_AREA,
+        )
+    else:
+        thumbnail = enhanced.copy()
+
+    if preset_name:
+        thumbnail = apply_preset_blended(thumbnail, load_preset(preset_name), 1.0)
+    return _bgr_to_jpeg_bytes(thumbnail)
 
 
 def _session_payload(session_id: str, session: dict) -> dict:
@@ -152,6 +171,26 @@ def session_image(session_id: str, kind: str):
         as_attachment=request.args.get("download") == "1",
         download_name=download_name,
     )
+    response.headers["Cache-Control"] = "private, no-store"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
+@app.route("/sessions/<session_id>/presets/<preset_name>/thumbnail", methods=["GET"])
+def preset_thumbnail(session_id: str, preset_name: str):
+    session = _get_session(session_id)
+    if session is None:
+        return jsonify(error="Session expired or not found."), 404
+
+    selected_preset = None if preset_name == "auto" else preset_name
+    try:
+        jpeg = _filter_thumbnail(session["enhanced"], selected_preset)
+    except ValueError as exc:
+        return jsonify(error=str(exc)), 404
+    except cv2.error:
+        return jsonify(error="Could not render filter preview."), 422
+
+    response = send_file(BytesIO(jpeg), mimetype="image/jpeg")
     response.headers["Cache-Control"] = "private, no-store"
     response.headers["X-Content-Type-Options"] = "nosniff"
     return response

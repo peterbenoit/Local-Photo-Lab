@@ -138,7 +138,7 @@ P2 improves product quality; P3 contains larger, optional capabilities.
 - [ ] Evaluate a conservative denoise/sharpen stage separately from exposure and color correction; keep it opt-in until quality data supports a default.
 - [ ] Evaluate an optional Real-ESRGAN integration as a separate extra/process so the classical CPU-only MVP stays lightweight.
 - [ ] Add a non-destructive recipe/manifest export so an enhancement can be reproduced later from the original.
-- [ ] Add a simple local processing history only if repeated web use shows that users need it; keep originals outside application-managed storage.
+- [ ] Add a low-priority recent-edits tray for the latest configurable number of photos. Start with the existing capped in-memory sessions rather than browser persistence; restore each surviving session's current look/intensity, provide Remove/Clear controls and explicit retention/privacy copy, and let entries expire on restart or eviction. Keep originals outside persistent application-managed storage and require a demonstrated need plus explicit opt-in before considering `localStorage`, IndexedDB, or disk persistence.
 
 ## Recommended delivery order
 
