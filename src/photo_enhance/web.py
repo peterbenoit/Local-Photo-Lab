@@ -35,6 +35,7 @@ app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
 MAX_DECODED_PIXELS = 40_000_000
 MAX_IMAGE_DIMENSION = 12_000
 FILTER_THUMBNAIL_MAX_DIMENSION = 320
+COMPARISON_PANEL_MAX_DIMENSION = 2400
 
 MAX_SESSIONS = 20
 _sessions: "OrderedDict[str, dict]" = OrderedDict()
@@ -108,6 +109,52 @@ def _filter_thumbnail(enhanced: np.ndarray, preset_name: str | None) -> bytes:
     return _bgr_to_jpeg_bytes(thumbnail)
 
 
+def _comparison_jpeg(before_jpeg: bytes, after_jpeg: bytes) -> bytes:
+    """Build a bounded, labeled side-by-side comparison JPEG."""
+    before = cv2.imdecode(np.frombuffer(before_jpeg, dtype=np.uint8), cv2.IMREAD_COLOR)
+    after = cv2.imdecode(np.frombuffer(after_jpeg, dtype=np.uint8), cv2.IMREAD_COLOR)
+    if before is None or after is None:
+        raise ValueError("Could not decode comparison images")
+    if before.shape[:2] != after.shape[:2]:
+        after = cv2.resize(after, (before.shape[1], before.shape[0]), interpolation=cv2.INTER_AREA)
+
+    height, width = before.shape[:2]
+    scale = min(1.0, COMPARISON_PANEL_MAX_DIMENSION / max(height, width))
+    if scale < 1.0:
+        panel_size = (max(1, round(width * scale)), max(1, round(height * scale)))
+        before = cv2.resize(before, panel_size, interpolation=cv2.INTER_AREA)
+        after = cv2.resize(after, panel_size, interpolation=cv2.INTER_AREA)
+        height, width = before.shape[:2]
+
+    header_height = 48
+    gap = 12
+    canvas = np.full((height + header_height, width * 2 + gap, 3), (15, 17, 20), dtype=np.uint8)
+    canvas[header_height:, :width] = before
+    canvas[header_height:, width + gap:] = after
+    label_color = (234, 242, 245)
+    cv2.putText(
+        canvas,
+        "BEFORE",
+        (14, 32),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.65,
+        label_color,
+        2,
+        cv2.LINE_AA,
+    )
+    cv2.putText(
+        canvas,
+        "AFTER",
+        (width + gap + 14, 32),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.65,
+        label_color,
+        2,
+        cv2.LINE_AA,
+    )
+    return _bgr_to_jpeg_bytes(canvas)
+
+
 def _session_payload(session_id: str, session: dict) -> dict:
     result_url = url_for(
         "session_image",
@@ -127,6 +174,12 @@ def _session_payload(session_id: str, session: dict) -> dict:
             download=1,
         ),
         "download_name": session["download_name"],
+        "comparison_url": url_for(
+            "session_comparison",
+            session_id=session_id,
+            v=session["result_id"],
+        ),
+        "comparison_name": f"{session['download_stem']}_before-after.jpg",
         "details": session["details"],
         "preset": session["preset"],
         "intensity": session["intensity"],
@@ -197,6 +250,30 @@ def preset_thumbnail(session_id: str, preset_name: str):
         return jsonify(error="Could not render filter preview."), 422
 
     response = send_file(BytesIO(jpeg), mimetype="image/jpeg")
+    response.headers["Cache-Control"] = "private, no-store"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
+@app.route("/sessions/<session_id>/comparison", methods=["GET"])
+def session_comparison(session_id: str):
+    session = _get_session(session_id)
+    if session is None:
+        return jsonify(error="Session expired or not found."), 404
+    if request.args.get("v") != session["result_id"]:
+        return jsonify(error="Comparison result expired."), 404
+
+    try:
+        jpeg = _comparison_jpeg(session["before_jpeg"], session["result_jpeg"])
+    except (ValueError, cv2.error):
+        return jsonify(error="Could not create comparison image."), 500
+
+    response = send_file(
+        BytesIO(jpeg),
+        mimetype="image/jpeg",
+        as_attachment=True,
+        download_name=f"{session['download_stem']}_before-after.jpg",
+    )
     response.headers["Cache-Control"] = "private, no-store"
     response.headers["X-Content-Type-Options"] = "nosniff"
     return response

@@ -139,6 +139,8 @@ def test_upload_returns_session_id_and_images():
     assert body["before"].startswith(f"/sessions/{body['session_id']}/images/before")
     assert body["after"].startswith(f"/sessions/{body['session_id']}/images/result?v=")
     assert body["download_url"].endswith("&download=1")
+    assert body["comparison_url"].startswith(f"/sessions/{body['session_id']}/comparison?v=")
+    assert body["comparison_name"] == "photo_before-after.jpg"
     assert b"base64" not in resp.data
     assert len(resp.data) < 2_000
     assert body["download_name"] == "photo_enhanced.jpg"
@@ -278,6 +280,7 @@ def test_session_image_urls_serve_jpeg_and_download_headers():
     before = client.get(upload["before"])
     result = client.get(upload["after"])
     download = client.get(upload["download_url"])
+    comparison = client.get(upload["comparison_url"])
 
     assert before.status_code == 200
     assert result.status_code == 200
@@ -287,6 +290,11 @@ def test_session_image_urls_serve_jpeg_and_download_headers():
     assert result.headers["X-Content-Type-Options"] == "nosniff"
     assert "attachment" in download.headers["Content-Disposition"]
     assert "family_photo_enhanced.jpg" in download.headers["Content-Disposition"]
+    assert comparison.status_code == 200
+    assert comparison.data.startswith(b"\xff\xd8")
+    assert "attachment" in comparison.headers["Content-Disposition"]
+    assert "family_photo_before-after.jpg" in comparison.headers["Content-Disposition"]
+    assert comparison.headers["Cache-Control"] == "private, no-store"
 
 
 def test_session_filter_thumbnails_render_auto_and_preset_looks():
@@ -319,6 +327,7 @@ def test_superseded_result_url_expires_after_filter_change():
         content_type="multipart/form-data",
     ).get_json()
     old_result_url = upload["after"]
+    old_comparison_url = upload["comparison_url"]
 
     applied = client.post(
         "/apply",
@@ -326,6 +335,7 @@ def test_superseded_result_url_expires_after_filter_change():
     ).get_json()
 
     assert client.get(old_result_url).status_code == 404
+    assert client.get(old_comparison_url).status_code == 404
     assert client.get(applied["after"]).status_code == 200
 
 

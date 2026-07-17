@@ -2,6 +2,15 @@
 
 All notable changes to this project are logged here, newest first.
 
+## 2026-07-17 — Downloadable before/after comparisons
+
+- Added a secondary result action that exports the current original and edited
+  result as one labeled, side-by-side JPEG.
+- Comparison resources use the same private, revision-bound session URLs as the
+  main download, so an older export expires after any adjustment changes.
+- Each comparison panel is bounded to 2,400 pixels on its longest side to keep
+  memory and output size practical for large uploads.
+
 ## 2026-07-17 — Vignette and film-grain finishing controls
 
 - Added optional 0–100% vignette and monochrome film-grain controls after the

@@ -47,6 +47,10 @@ Optional vignette and film-grain controls are applied after the chosen filter.
 Their settings update the live preview and downloaded JPEG and are restored
 with the rest of the short-lived session state.
 
+The result can also be downloaded as a labeled before/after comparison JPEG.
+Each panel is bounded to 2,400 pixels on its longest side so comparison exports
+remain practical even for very large source photos.
+
 Web previews are converted to 8-bit JPEG and do not contain source metadata.
 Transparent images and images above 8 bits per channel are rejected with an
 explanation instead of being silently flattened or down-converted. After

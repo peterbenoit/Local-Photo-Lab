@@ -358,6 +358,12 @@
       text-decoration: none;
       white-space: nowrap;
     }
+    .result-downloads { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; }
+    .download-link-secondary {
+      color: var(--text);
+      border-color: var(--border-strong);
+      background: var(--surface-soft);
+    }
     .result-details {
       display: flex;
       flex-wrap: wrap;
@@ -506,7 +512,8 @@
       .file-picker { flex: 1 1 auto; justify-content: center; }
       .filter-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .result-header { align-items: stretch; flex-direction: column; }
-      .download-link { width: 100%; }
+      .result-downloads { justify-content: stretch; }
+      .result-downloads .download-link { width: 100%; }
     }
     @media (prefers-reduced-motion: no-preference) {
       .filter-card, button, .download-link { transition: border-color 120ms ease, background 120ms ease, color 120ms ease; }
@@ -595,7 +602,10 @@
             <p class="result-kicker">Live preview</p>
             <h2 id="results-heading" tabindex="-1">Your enhanced photo</h2>
           </div>
-          <a class="download-link" id="download-link" href="#" download hidden>Download JPEG</a>
+          <div class="result-downloads">
+            <a class="download-link" id="download-link" href="#" download hidden>Download JPEG</a>
+            <a class="download-link download-link-secondary" id="comparison-download-link" href="#" download hidden>Before + after</a>
+          </div>
         </div>
         <dl class="result-details" aria-label="Result details">
           <div><dt>Size</dt><dd id="detail-dimensions"></dd></div>
@@ -664,6 +674,7 @@
     const afterImg = document.getElementById("after-img");
     const afterCaption = document.getElementById("after-caption");
     const downloadLink = document.getElementById("download-link");
+    const comparisonDownloadLink = document.getElementById("comparison-download-link");
     const comparisonControls = document.getElementById("comparison-controls");
     const sliderViewButton = document.getElementById("slider-view-button");
     const sideBySideButton = document.getElementById("side-by-side-button");
@@ -728,6 +739,9 @@
       downloadLink.href = data.download_url;
       downloadLink.download = data.download_name;
       downloadLink.hidden = false;
+      comparisonDownloadLink.href = data.comparison_url;
+      comparisonDownloadLink.download = data.comparison_name;
+      comparisonDownloadLink.hidden = false;
     }
 
     function updateSessionUrl(id) {
