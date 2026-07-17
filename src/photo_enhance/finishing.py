@@ -23,19 +23,31 @@ def _validate_strength(name: str, value: float) -> float:
     return float(value)
 
 
+def _validate_signed_strength(name: str, value: float) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not np.isfinite(value):
+        raise ValueError(f"{name} must be a finite number from -1 to 1")
+    if not -1 <= value <= 1:
+        raise ValueError(f"{name} must be from -1 to 1")
+    return float(value)
+
+
 def apply_finishing(
     img: np.ndarray,
     *,
+    temperature: float = 0.0,
+    fade: float = 0.0,
     vignette: float = 0.0,
     grain: float = 0.0,
     grain_seed: int = 0,
 ) -> np.ndarray:
-    """Apply bounded vignette and monochrome film grain to a BGR uint8 image.
+    """Apply bounded color and texture finishing to a BGR uint8 image.
 
     Work is performed in row chunks to avoid allocating full-resolution float
     masks or noise arrays for large accepted web images.
     """
     _validate_image(img)
+    temperature = _validate_signed_strength("temperature", temperature)
+    fade = _validate_strength("fade", fade)
     vignette = _validate_strength("vignette", vignette)
     grain = _validate_strength("grain", grain)
     if isinstance(grain_seed, bool) or not isinstance(grain_seed, int):
@@ -43,6 +55,20 @@ def apply_finishing(
 
     result = img.copy()
     height, width = result.shape[:2]
+
+    if temperature != 0 or fade > 0:
+        channel_scale = np.array(
+            [1.0 - 0.18 * temperature, 1.0, 1.0 + 0.18 * temperature],
+            dtype=np.float32,
+        )
+        contrast = 1.0 - 0.18 * fade
+        black_lift = 20.0 * fade
+        for start in range(0, height, _CHUNK_ROWS):
+            stop = min(start + _CHUNK_ROWS, height)
+            stripe = result[start:stop].astype(np.float32)
+            stripe = stripe * channel_scale
+            stripe = stripe * contrast + black_lift
+            result[start:stop] = np.clip(stripe, 0, 255).astype(np.uint8)
 
     if vignette > 0:
         x_squared = np.linspace(-1.0, 1.0, width, dtype=np.float32) ** 2

@@ -2,6 +2,15 @@
 
 All notable changes to this project are logged here, newest first.
 
+## 2026-07-17 — Warmth and matte-fade finishing controls
+
+- Added a bipolar warmth control for cooling or warming any selected look, plus
+  a separate fade control that gently lifts blacks and softens highlights.
+- Both adjustments update the live preview and downloads, restore on refresh,
+  and are reflected in the result label and output filename.
+- Color finishing runs in bounded row chunks to preserve the existing memory
+  behavior for large accepted uploads.
+
 ## 2026-07-17 — Downloadable before/after comparisons
 
 - Added a secondary result action that exports the current original and edited

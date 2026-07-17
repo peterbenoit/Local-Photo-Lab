@@ -297,7 +297,7 @@
       font-size: 0.78rem;
       font-weight: 700;
     }
-    #intensity-value, #vignette-value, #grain-value {
+    #intensity-value, #temperature-value, #fade-value, #vignette-value, #grain-value {
       color: var(--text);
       font-variant-numeric: tabular-nums;
     }
@@ -586,6 +586,14 @@
           <h3 id="finishing-heading">Finishing touches</h3>
           <p class="finishing-note">Optional effects applied after the selected look.</p>
           <div class="finish-control">
+            <label class="intensity-heading" for="temperature-slider">Warmth <span id="temperature-value">Neutral</span></label>
+            <input class="control-slider" type="range" id="temperature-slider" min="-100" max="100" value="0">
+          </div>
+          <div class="finish-control">
+            <label class="intensity-heading" for="fade-slider">Fade <span id="fade-value">0%</span></label>
+            <input class="control-slider" type="range" id="fade-slider" min="0" max="100" value="0">
+          </div>
+          <div class="finish-control">
             <label class="intensity-heading" for="vignette-slider">Vignette <span id="vignette-value">0%</span></label>
             <input class="control-slider" type="range" id="vignette-slider" min="0" max="100" value="0">
           </div>
@@ -661,6 +669,10 @@
     const filterPreviews = Array.from(document.querySelectorAll(".filter-preview"));
     const intensitySlider = document.getElementById("intensity-slider");
     const intensityValue = document.getElementById("intensity-value");
+    const temperatureSlider = document.getElementById("temperature-slider");
+    const temperatureValue = document.getElementById("temperature-value");
+    const fadeSlider = document.getElementById("fade-slider");
+    const fadeValue = document.getElementById("fade-value");
     const vignetteSlider = document.getElementById("vignette-slider");
     const vignetteValue = document.getElementById("vignette-value");
     const grainSlider = document.getElementById("grain-slider");
@@ -724,6 +736,9 @@
 
     function activeLookName() {
       const finishers = [];
+      if (Number(temperatureSlider.value) > 0) finishers.push("Warm");
+      if (Number(temperatureSlider.value) < 0) finishers.push("Cool");
+      if (Number(fadeSlider.value) > 0) finishers.push("Fade");
       if (Number(vignetteSlider.value) > 0) finishers.push("Vignette");
       if (Number(grainSlider.value) > 0) finishers.push("Grain");
       return [selectedFilterName(), ...finishers].join(" + ");
@@ -774,6 +789,10 @@
       if (restoredRadio) restoredRadio.checked = true;
       intensitySlider.value = data.intensity ?? 100;
       intensityValue.textContent = `${intensitySlider.value}%`;
+      temperatureSlider.value = data.temperature ?? 0;
+      updateTemperatureValue();
+      fadeSlider.value = data.fade ?? 0;
+      fadeValue.textContent = `${fadeSlider.value}%`;
       vignetteSlider.value = data.vignette ?? 0;
       vignetteValue.textContent = `${vignetteSlider.value}%`;
       grainSlider.value = data.grain ?? 0;
@@ -818,6 +837,13 @@
         "aria-valuetext",
         `${position}% original photo and ${100 - position}% enhanced photo visible`,
       );
+    }
+
+    function updateTemperatureValue() {
+      const value = Number(temperatureSlider.value);
+      temperatureValue.textContent = value === 0
+        ? "Neutral"
+        : `${value > 0 ? "+" : ""}${value} ${value > 0 ? "Warm" : "Cool"}`;
     }
 
     function setComparisonView(view) {
@@ -873,6 +899,8 @@
       const token = ++applyRequestToken;
       const preset = selectedPresetId();
       const intensity = Number(intensitySlider.value);
+      const temperature = Number(temperatureSlider.value);
+      const fade = Number(fadeSlider.value);
       const vignette = Number(vignetteSlider.value);
       const grain = Number(grainSlider.value);
       setStatus("Applying…");
@@ -886,6 +914,8 @@
             session_id: sessionId,
             preset,
             intensity,
+            temperature,
+            fade,
             vignette,
             grain,
             revision: token,
@@ -977,6 +1007,16 @@
 
     intensitySlider.addEventListener("input", () => {
       intensityValue.textContent = `${intensitySlider.value}%`;
+      scheduleAdjustment();
+    });
+
+    temperatureSlider.addEventListener("input", () => {
+      updateTemperatureValue();
+      scheduleAdjustment();
+    });
+
+    fadeSlider.addEventListener("input", () => {
+      fadeValue.textContent = `${fadeSlider.value}%`;
       scheduleAdjustment();
     });
 

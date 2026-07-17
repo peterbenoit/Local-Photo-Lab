@@ -64,6 +64,8 @@ def _store_session(
             "details": details,
             "preset": None,
             "intensity": 100,
+            "temperature": 0,
+            "fade": 0,
             "vignette": 0,
             "grain": 0,
             "grain_seed": uuid.uuid4().int & 0xFFFFFFFF,
@@ -183,6 +185,8 @@ def _session_payload(session_id: str, session: dict) -> dict:
         "details": session["details"],
         "preset": session["preset"],
         "intensity": session["intensity"],
+        "temperature": session["temperature"],
+        "fade": session["fade"],
         "vignette": session["vignette"],
         "grain": session["grain"],
         "revision": session["revision"],
@@ -346,11 +350,15 @@ def apply():
     session = _get_session(session_id) if session_id else None
     if session is None:
         return jsonify(error="Session expired or not found. Please re-upload the photo."), 400
+    temperature = data.get("temperature", session["temperature"])
+    fade = data.get("fade", session["fade"])
     vignette = data.get("vignette", session["vignette"])
     grain = data.get("grain", session["grain"])
 
     try:
         intensity_percent = max(0, min(100, int(intensity)))
+        temperature_percent = max(-100, min(100, int(temperature)))
+        fade_percent = max(0, min(100, int(fade)))
         vignette_percent = max(0, min(100, int(vignette)))
         grain_percent = max(0, min(100, int(grain)))
         intensity_fraction = intensity_percent / 100.0
@@ -382,6 +390,8 @@ def apply():
     try:
         result = apply_finishing(
             result,
+            temperature=temperature_percent / 100.0,
+            fade=fade_percent / 100.0,
             vignette=vignette_percent / 100.0,
             grain=grain_percent / 100.0,
             grain_seed=session["grain_seed"],
@@ -395,6 +405,12 @@ def apply():
         return jsonify(error="Could not encode the filtered preview."), 500
     preset_suffix = f"_{preset_name}" if preset_name else ""
     finish_suffix = ""
+    if temperature_percent > 0:
+        finish_suffix += "_warm"
+    elif temperature_percent < 0:
+        finish_suffix += "_cool"
+    if fade_percent:
+        finish_suffix += "_fade"
     if vignette_percent:
         finish_suffix += "_vignette"
     if grain_percent:
@@ -422,6 +438,8 @@ def apply():
             details=details,
             preset=preset_name,
             intensity=intensity_percent,
+            temperature=temperature_percent,
+            fade=fade_percent,
             vignette=vignette_percent,
             grain=grain_percent,
             revision=requested_revision,

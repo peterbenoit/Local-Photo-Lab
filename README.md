@@ -44,8 +44,9 @@ already-uploaded image (no re-upload). The server keeps the last 20 uploaded
 sessions in memory; restarting the server clears them.
 
 Optional vignette and film-grain controls are applied after the chosen filter.
-Their settings update the live preview and downloaded JPEG and are restored
-with the rest of the short-lived session state.
+Warmth and matte-fade controls can also fine-tune the color temperature and
+black point. All finishing settings update the live preview and downloaded JPEG
+and are restored with the rest of the short-lived session state.
 
 The result can also be downloaded as a labeled before/after comparison JPEG.
 Each panel is bounded to 2,400 pixels on its longest side so comparison exports

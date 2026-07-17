@@ -149,6 +149,8 @@ def test_upload_returns_session_id_and_images():
     assert body["details"]["source_format"] == "JPEG"
     assert body["details"]["output_format"] == "JPEG preview"
     assert body["details"]["processing_ms"] >= 0
+    assert body["temperature"] == 0
+    assert body["fade"] == 0
     assert body["vignette"] == 0
     assert body["grain"] == 0
 
@@ -235,6 +237,8 @@ def test_apply_with_finishing_controls_updates_result_and_filename():
             "session_id": upload["session_id"],
             "preset": "golden_hour",
             "intensity": 70,
+            "temperature": 30,
+            "fade": 15,
             "vignette": 40,
             "grain": 25,
         },
@@ -242,9 +246,11 @@ def test_apply_with_finishing_controls_updates_result_and_filename():
 
     assert response.status_code == 200
     body = response.get_json()
+    assert body["temperature"] == 30
+    assert body["fade"] == 15
     assert body["vignette"] == 40
     assert body["grain"] == 25
-    assert body["download_name"] == "photo_enhanced_golden_hour_vignette_grain.jpg"
+    assert body["download_name"] == "photo_enhanced_golden_hour_warm_fade_vignette_grain.jpg"
 
 
 def test_apply_with_unknown_preset_returns_400():
@@ -353,6 +359,8 @@ def test_session_state_restores_current_filter_and_intensity():
             "session_id": session_id,
             "preset": "warm_film",
             "intensity": 35,
+            "temperature": -25,
+            "fade": 10,
             "vignette": 45,
             "grain": 20,
             "revision": 4,
@@ -366,6 +374,8 @@ def test_session_state_restores_current_filter_and_intensity():
     body = restored.get_json()
     assert body["preset"] == "warm_film"
     assert body["intensity"] == 35
+    assert body["temperature"] == -25
+    assert body["fade"] == 10
     assert body["vignette"] == 45
     assert body["grain"] == 20
     assert body["revision"] == 4
