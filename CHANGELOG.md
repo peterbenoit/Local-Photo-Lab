@@ -2,6 +2,13 @@
 
 All notable changes to this project are logged here, newest first.
 
+## 2026-07-17 — One-step photo selection
+
+- Choosing a photo from the native file picker now starts enhancement
+  immediately, matching drag-and-drop behavior.
+- Removed the redundant Enhance Photo button and gave the remaining picker a
+  clear busy state while the image is processing.
+
 ## 2026-07-16 — Darkroom UI and four new looks
 
 - Reframed the web app as a focused local darkroom with a photograph-first

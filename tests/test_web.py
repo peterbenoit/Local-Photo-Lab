@@ -68,6 +68,8 @@ def test_index_has_progressive_dropzone_and_keyboard_comparison_controls():
     assert "`${position}% original photo and ${100 - position}% enhanced photo visible`" in text
     assert 'id="side-by-side-view"' in text
     assert 'uploadDropzone.addEventListener("drop"' in text
+    assert 'photoInput.addEventListener("change"' in text
+    assert "Enhance photo" not in text
     assert 'comparisonRange.addEventListener("input"' in text
     assert "async function restoreSession()" in text
     assert 'url.searchParams.set("session", id)' in text

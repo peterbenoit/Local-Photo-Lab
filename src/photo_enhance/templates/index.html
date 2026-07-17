@@ -189,8 +189,10 @@
       font-size: 0.9rem;
       font-weight: 700;
     }
-    .file-picker { display: inline-flex; align-items: center; cursor: pointer; }
-    #upload-button {
+    .file-picker {
+      display: inline-flex;
+      align-items: center;
+      cursor: pointer;
       color: var(--accent-ink);
       border-color: var(--accent);
       background: var(--accent);
@@ -468,7 +470,7 @@
       main { padding-top: 3.5rem; }
       .upload-dropzone { grid-template-columns: 1fr; }
       .upload-actions { align-items: stretch; }
-      .file-picker, #upload-button { flex: 1 1 auto; justify-content: center; }
+      .file-picker { flex: 1 1 auto; justify-content: center; }
       .filter-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .result-header { align-items: stretch; flex-direction: column; }
       .download-link { width: 100%; }
@@ -498,9 +500,9 @@
           <span class="upload-note" id="drop-hint">JPEG, PNG, TIFF, BMP, or WebP · up to 20 MB</span>
         </div>
         <div class="upload-actions">
-          <label class="file-picker" for="photo-input">Choose photo</label>
+          <label for="photo-input" hidden>Photo</label>
           <input type="file" id="photo-input" name="photo" accept="image/*" required aria-describedby="upload-hint error-message">
-          <button type="submit" id="upload-button">Enhance photo</button>
+          <button class="file-picker" type="button" id="file-picker">Choose photo</button>
         </div>
       </fieldset>
     </form>
@@ -593,7 +595,7 @@
     const uploadForm = document.getElementById("upload-form");
     const uploadDropzone = document.getElementById("upload-dropzone");
     const photoInput = document.getElementById("photo-input");
-    const uploadButton = document.getElementById("upload-button");
+    const filePicker = document.getElementById("file-picker");
     const editorShell = document.getElementById("editor-shell");
     const controls = document.getElementById("controls");
     const presetRadios = Array.from(document.querySelectorAll('input[name="preset"]'));
@@ -746,7 +748,9 @@
       controls.removeAttribute("aria-busy");
       showError("");
       setStatus("Uploading…");
-      uploadButton.disabled = true;
+      photoInput.disabled = true;
+      filePicker.disabled = true;
+      filePicker.textContent = "Enhancing…";
       uploadForm.setAttribute("aria-busy", "true");
 
       const formData = new FormData();
@@ -766,7 +770,10 @@
         setStatus("");
       } finally {
         uploadInProgress = false;
-        uploadButton.disabled = false;
+        photoInput.disabled = false;
+        photoInput.value = "";
+        filePicker.disabled = false;
+        filePicker.textContent = "Choose photo";
         uploadForm.removeAttribute("aria-busy");
       }
     }
@@ -807,14 +814,13 @@
       }
     }
 
-    uploadForm.addEventListener("submit", (event) => {
-      event.preventDefault();
+    uploadForm.addEventListener("submit", (event) => event.preventDefault());
+
+    filePicker.addEventListener("click", () => photoInput.click());
+
+    photoInput.addEventListener("change", () => {
       const file = photoInput.files[0];
-      if (!file) {
-        showError("Choose a photo first.", true);
-        return;
-      }
-      uploadPhoto(file);
+      if (file) uploadPhoto(file);
     });
 
     let dragDepth = 0;
