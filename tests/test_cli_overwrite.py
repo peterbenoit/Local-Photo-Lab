@@ -92,6 +92,18 @@ def test_batch_requires_folder_input(tmp_path):
     assert "--batch requires INPUT_PATH to be a folder" in result.output
 
 
+def test_empty_batch_reports_no_supported_images_without_creating_output(tmp_path):
+    input_dir = tmp_path / "input"
+    output_dir = tmp_path / "output"
+    input_dir.mkdir()
+
+    result = CliRunner().invoke(main, [str(input_dir), "--batch", "-o", str(output_dir)])
+
+    assert result.exit_code == 0
+    assert result.output == f"No supported images found in {input_dir}\n"
+    assert not output_dir.exists()
+
+
 def test_single_file_refuses_to_overwrite_input_by_default(tmp_path):
     photo = tmp_path / "photo.jpg"
     _write_test_image(photo)

@@ -45,9 +45,9 @@ P2 improves product quality; P3 contains larger, optional capabilities.
 ## P1 — Prove all user-facing paths
 
 - [x] Add CLI tests with Click's test runner for single-file success, presets, default naming, custom output, bad input types, and overwrite protection.
-- [ ] Add batch CLI tests for mixed files, empty folders, per-file failures, summaries, output collisions, and exit codes.
+- [x] Add batch CLI tests for mixed files, empty folders, per-file failures, summaries, output collisions, and exit codes.
 - [x] Add `imageio_utils.py` round-trip tests for every advertised extension.
-- [ ] Add Flask test-client coverage for the index, valid upload, missing upload, invalid image, invalid preset, oversized request, and enhancement failure.
+- [x] Add Flask test-client coverage for the index, valid upload, missing upload, invalid image, invalid preset, oversized request, and enhancement failure.
 - [x] Add a packaged-wheel smoke test that installs the wheel and runs both console entry points; source-tree tests alone cannot catch missing package data.
 - [ ] Replace weak implementation-coupled assertions with outcome tests based on luminance, clipping, color error, and perceptual difference.
 - [ ] Add edge-case tests for all-black, all-white, constant-color, tiny, very large, noisy, extremely dark, and extremely bright images.

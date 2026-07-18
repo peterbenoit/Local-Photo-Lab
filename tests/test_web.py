@@ -105,6 +105,18 @@ def test_upload_without_file_returns_400():
     assert "error" in resp.get_json()
 
 
+def test_upload_rejects_malformed_image_bytes():
+    client = app.test_client()
+    resp = client.post(
+        "/upload",
+        data={"photo": (io.BytesIO(b"this is not an image"), "broken.jpg")},
+        content_type="multipart/form-data",
+    )
+
+    assert resp.status_code == 400
+    assert resp.get_json()["error"] == "Could not read that file as an image."
+
+
 def test_oversized_upload_returns_friendly_json_error():
     client = app.test_client()
     original_limit = app.config["MAX_CONTENT_LENGTH"]
