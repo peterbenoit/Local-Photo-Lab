@@ -96,14 +96,29 @@ uv run photo-enhance path/to/photo.jpg
 # With a creative preset
 uv run photo-enhance path/to/photo.jpg --preset warm_film
 
+# Use gentler automatic corrections or disable a stage that does not suit the photo
+uv run photo-enhance path/to/photo.jpg --mode gentle --no-white-balance
+
 # With bird-oriented tonal and detail defaults
 uv run photo-enhance path/to/bird.jpg --preset bird_natural
 
-# Privacy-sensitive JPEG export: remove EXIF/GPS, ICC, and DPI; choose quality
-uv run photo-enhance path/to/photo.jpg --strip-metadata --quality 90
+# Browse preset IDs with their display names and descriptions
+uv run photo-enhance --list-presets
+
+# Privacy-sensitive WebP export: remove metadata and choose quality
+uv run photo-enhance path/to/photo.jpg --format webp --metadata strip --quality 90
 
 # Batch process a folder, writing to an output folder
 uv run photo-enhance path/to/folder --batch -o path/to/output_folder
+
+# Preview the files and destinations without decoding or writing photos
+uv run photo-enhance path/to/folder --batch -o path/to/output_folder --dry-run
+
+# Include nested folders and recreate their relative structure under the output
+uv run photo-enhance path/to/folder --batch --recursive -o path/to/output_folder
+
+# Return one JSON batch result for a script instead of human status lines
+uv run photo-enhance path/to/folder --batch -o path/to/output_folder --json-summary
 ```
 
 Nature presets: `bird_natural`, `feather_detail`, `backlit_bird`, `woodland`,
@@ -121,11 +136,32 @@ container-specific metadata are not guaranteed to survive.
 
 JPEG exports default to quality 92, WebP to quality 90, PNG uses optimized
 lossless compression, and TIFF uses LZW compression. `--quality 1-100` is
-available for JPEG and WebP outputs.
+available for JPEG and WebP outputs. Use `--format jpeg|png|tiff|bmp|webp` to
+force the encoded format and corresponding filename extension for one photo or
+an entire batch. `--metadata preserve|strip` makes the metadata policy explicit;
+the older `--strip-metadata` flag remains as shorthand.
 
 By default, the CLI refuses to let an output path overwrite its input (single
 file, or a batch output folder that resolves to the input folder) — pass
 `--overwrite` to allow it explicitly.
+
+Use `--dry-run` to inspect supported inputs, output paths, collisions, and the
+batch summary without reading image contents or creating the output folder.
+Add `--recursive` in batch mode to include nested folders. When an output folder
+is supplied, each photo's relative directory structure is recreated there; an
+output tree inside the input folder is excluded from future recursive runs.
+
+Automatic corrections default to `--mode standard`; `gentle` scales the
+analyzed recipe down and `strong` increases it within the same safe 0–100%
+bounds. `--no-white-balance`, `--no-levels`, and `--no-local-contrast` disable
+individual Auto stages for difficult lighting or diagnosis. A selected preset
+still keeps its authored look and nature-adjustment defaults.
+
+Interactive batches prefix status with the current and total file count; logs
+retain stable one-line statuses and a final summary. `--json-summary` replaces
+those lines with one JSON object containing totals and per-file results. Ctrl-C
+exits with status 130, and the atomic writer does not install the interrupted
+photo's temporary output.
 
 ## Supported image contract
 

@@ -92,15 +92,15 @@ P2 improves product quality; P3 contains larger, optional capabilities.
 
 ## P1 — Strengthen CLI usability
 
-- [ ] Add `--list-presets` that prints each preset's display name and description, not only its internal identifier.
-- [ ] Add `--dry-run` to show selected inputs and output paths without writing files.
-- [ ] Add optional recursive folder processing while preserving relative directory structure.
-- [ ] Add explicit `--format`, `--quality`, and metadata-policy options with validated combinations.
-- [ ] Expose bounded correction strength controls or named modes such as `gentle`, `standard`, and `strong`.
-- [ ] Allow individual white-balance, levels, and CLAHE stages to be disabled for diagnosis and user preference.
-- [ ] Add a progress indicator for large batches that degrades cleanly in non-interactive logs.
-- [ ] Support machine-readable JSON summaries for automation.
-- [ ] Ensure Ctrl-C produces no partial output and exits with the conventional interruption status.
+- [x] Add `--list-presets` that prints each preset's display name and description, not only its internal identifier.
+- [x] Add `--dry-run` to show selected inputs and output paths without writing files.
+- [x] Add optional recursive folder processing while preserving relative directory structure.
+- [x] Add explicit `--format`, `--quality`, and metadata-policy options with validated combinations.
+- [x] Expose bounded correction strength controls or named modes such as `gentle`, `standard`, and `strong`.
+- [x] Allow individual white-balance, levels, and CLAHE stages to be disabled for diagnosis and user preference.
+- [x] Add a progress indicator for large batches that degrades cleanly in non-interactive logs.
+- [x] Support machine-readable JSON summaries for automation.
+- [x] Ensure Ctrl-C produces no partial output and exits with the conventional interruption status.
 
 ## P2 — Clarify architecture and extension points
 

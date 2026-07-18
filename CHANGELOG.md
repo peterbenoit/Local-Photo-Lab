@@ -2,6 +2,27 @@
 
 All notable changes to this project are logged here, newest first.
 
+## 2026-07-18 — CLI planning and preset discovery
+
+- Added `--list-presets`, which works without an input path and prints each
+  stable preset ID with its display name and description.
+- Added `--dry-run` for single photos and batches. It reports selected inputs,
+  destinations, collisions, and batch totals without decoding photos or
+  creating output directories.
+- Added opt-in recursive batch processing that preserves relative directories
+  and excludes a nested output tree from its own input scan.
+- Added explicit `--format` and `--metadata preserve|strip` export controls;
+  forced formats update output extensions, and incompatible quality/format
+  combinations fail before image processing begins.
+- Added bounded `gentle`, `standard`, and `strong` automatic-correction modes,
+  plus independent switches for white balance, levels, and local contrast.
+- Added TTY-aware batch counts, stable non-interactive logs, and optional JSON
+  summaries with per-file results for automation.
+- Ctrl-C now exits with status 130 while relying on the atomic output writer to
+  keep an interrupted photo from becoming a partial final file.
+- Completed the remaining batch CLI and Flask upload-path coverage tracked in
+  the project review.
+
 ## 2026-07-18 — Explainable, parameterized Auto
 
 - Auto now analyzes each source and produces immutable, reproducible strengths
