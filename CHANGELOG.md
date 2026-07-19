@@ -2,6 +2,19 @@
 
 All notable changes to this project are logged here, newest first.
 
+## 2026-07-19 — Recent edits tray
+
+- Added a recent-edits tray showing the newest surviving in-memory sessions
+  with their current thumbnail, look, and dimensions.
+- Recent edits reopen with their exact saved filter and adjustment settings;
+  individual Remove and Clear All controls immediately release server memory.
+- Removing the active edit now resets the editor, session URL, and keyboard
+  focus cleanly. The tray uses no browser or disk persistence and expires with
+  server restart or normal session eviction.
+- Added `PHOTO_ENHANCE_MAX_SESSIONS` to configure the in-memory retention limit
+  from 1 to 100 sessions; the interface displays the active limit in its
+  privacy copy.
+
 ## 2026-07-18 — Packaging cleanup
 
 - Added authorship, project links, classifiers, keywords, and a modern MIT

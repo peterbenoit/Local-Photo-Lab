@@ -98,6 +98,18 @@ def test_index_has_progressive_dropzone_and_keyboard_comparison_controls():
     assert "revision: token" in text
 
 
+def test_index_has_ephemeral_recent_edits_controls():
+    client = app.test_client()
+    text = client.get("/").get_data(as_text=True)
+
+    assert 'id="recent-edits" aria-labelledby="recent-heading" hidden' in text
+    assert 'id="recent-heading" tabindex="-1"' in text
+    assert 'id="recent-clear" type="button"' in text
+    assert "never saved by the browser" in text
+    assert 'recentList.addEventListener("click"' in text
+    assert 'event.target.closest("[data-recent-action]")' in text
+
+
 def test_upload_without_file_returns_400():
     client = app.test_client()
     resp = client.post("/upload", data={})
@@ -503,6 +515,51 @@ def test_session_state_restores_current_filter_and_intensity():
     assert body["auto_local_contrast"] == 25
     assert body["revision"] == 4
     assert body["after"] == applied.get_json()["after"]
+
+
+def test_recent_sessions_can_be_listed_reopened_and_removed():
+    client = app.test_client()
+    client.delete("/sessions")
+    first = client.post(
+        "/upload",
+        data={"photo": (io.BytesIO(_jpeg_bytes()), "first.jpg")},
+        content_type="multipart/form-data",
+    ).get_json()
+    second = client.post(
+        "/upload",
+        data={"photo": (io.BytesIO(_jpeg_bytes()), "second.jpg")},
+        content_type="multipart/form-data",
+    ).get_json()
+
+    listing = client.get("/sessions").get_json()
+
+    assert [item["session_id"] for item in listing["sessions"]] == [
+        second["session_id"],
+        first["session_id"],
+    ]
+    assert listing["sessions"][0]["name"] == "second"
+    assert listing["sessions"][0]["thumbnail"].startswith(
+        f"/sessions/{second['session_id']}/images/result?v="
+    )
+    assert client.get(f"/sessions/{first['session_id']}").status_code == 200
+    assert client.delete(f"/sessions/{first['session_id']}").status_code == 200
+    assert client.get(f"/sessions/{first['session_id']}").status_code == 404
+
+
+def test_recent_sessions_can_be_cleared_together():
+    client = app.test_client()
+    client.delete("/sessions")
+    client.post(
+        "/upload",
+        data={"photo": (io.BytesIO(_jpeg_bytes()), "photo.jpg")},
+        content_type="multipart/form-data",
+    )
+
+    cleared = client.delete("/sessions")
+
+    assert cleared.status_code == 200
+    assert cleared.get_json()["removed"] == 1
+    assert client.get("/sessions").get_json()["sessions"] == []
 
 
 def test_older_filter_revision_cannot_replace_newer_result():

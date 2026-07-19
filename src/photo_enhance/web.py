@@ -45,7 +45,11 @@ MAX_IMAGE_DIMENSION = 12_000
 FILTER_THUMBNAIL_MAX_DIMENSION = 320
 COMPARISON_PANEL_MAX_DIMENSION = 2400
 
-MAX_SESSIONS = 20
+try:
+    MAX_SESSIONS = max(1, min(100, int(os.environ.get("PHOTO_ENHANCE_MAX_SESSIONS", "20"))))
+except ValueError:
+    MAX_SESSIONS = 20
+app.config["MAX_SESSIONS"] = MAX_SESSIONS
 _sessions: "OrderedDict[str, dict]" = OrderedDict()
 _sessions_lock = threading.Lock()
 
@@ -104,7 +108,7 @@ def _store_session(
             "revision": 0,
         }
         _sessions.move_to_end(session_id)
-        while len(_sessions) > MAX_SESSIONS:
+        while len(_sessions) > app.config["MAX_SESSIONS"]:
             _sessions.popitem(last=False)
     return session_id
 
@@ -252,6 +256,22 @@ def _session_payload(session_id: str, session: dict) -> dict:
     }
 
 
+def _recent_session_payload(session_id: str, session: dict) -> dict:
+    preset_name = session["preset"] or "Auto"
+    return {
+        "session_id": session_id,
+        "name": session["download_stem"],
+        "look": preset_name.replace("_", " ").title(),
+        "dimensions": (f"{session['details']['width']} × {session['details']['height']} px"),
+        "thumbnail": url_for(
+            "session_image",
+            session_id=session_id,
+            kind="result",
+            v=session["result_id"],
+        ),
+    }
+
+
 @app.errorhandler(RequestEntityTooLarge)
 def upload_too_large(_error):
     return jsonify(
@@ -268,11 +288,32 @@ def index():
         presets=presets,
         nature_presets=[preset for preset in presets if preset["category"] == "nature"],
         creative_presets=[preset for preset in presets if preset["category"] != "nature"],
+        session_limit=app.config["MAX_SESSIONS"],
     )
 
 
-@app.route("/sessions/<session_id>", methods=["GET"])
+@app.route("/sessions", methods=["GET", "DELETE"])
+def recent_sessions():
+    with _sessions_lock:
+        if request.method == "DELETE":
+            removed = len(_sessions)
+            _sessions.clear()
+            return jsonify(removed=removed, sessions=[])
+        sessions = [
+            _recent_session_payload(session_id, session)
+            for session_id, session in reversed(_sessions.items())
+        ]
+    return jsonify(limit=app.config["MAX_SESSIONS"], sessions=sessions)
+
+
+@app.route("/sessions/<session_id>", methods=["GET", "DELETE"])
 def session_state(session_id: str):
+    if request.method == "DELETE":
+        with _sessions_lock:
+            removed = _sessions.pop(session_id, None)
+        if removed is None:
+            return jsonify(error="Session expired or not found."), 404
+        return jsonify(removed=session_id)
     session = _get_session(session_id)
     if session is None:
         return jsonify(error="Session expired or not found."), 404

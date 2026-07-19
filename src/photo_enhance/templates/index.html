@@ -505,6 +505,88 @@
       color: var(--muted);
       font-size: 0.76rem;
     }
+    .recent-edits {
+      margin-top: clamp(2.25rem, 6vw, 4.5rem);
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+    }
+    .recent-header {
+      margin-bottom: 0.85rem;
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .recent-header h2 { margin-bottom: 0.15rem; }
+    .recent-header p { margin: 0; color: var(--muted); font-size: 0.85rem; }
+    .recent-clear {
+      min-height: 44px;
+      flex: 0 0 auto;
+      color: var(--muted);
+      background: transparent;
+    }
+    .recent-list {
+      margin: 0;
+      padding: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 0.75rem;
+      list-style: none;
+    }
+    .recent-item {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: stretch;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+    }
+    .recent-card {
+      min-width: 0;
+      min-height: 76px;
+      padding: 0.5rem;
+      display: grid;
+      grid-template-columns: 64px minmax(0, 1fr);
+      gap: 0.7rem;
+      align-items: center;
+      text-align: left;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+    }
+    .recent-card[aria-current="true"] { background: rgb(242 179 95 / 8%); }
+    .recent-thumb {
+      width: 64px;
+      height: 58px;
+      display: block;
+      object-fit: cover;
+      border-radius: var(--radius-sm);
+      background: var(--surface-soft);
+    }
+    .recent-copy { min-width: 0; }
+    .recent-name, .recent-meta, .recent-current { display: block; }
+    .recent-name {
+      overflow: hidden;
+      color: var(--text);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .recent-meta { color: var(--muted); font-size: 0.74rem; font-weight: 500; }
+    .recent-current { color: var(--accent); font-size: 0.7rem; text-transform: uppercase; }
+    .recent-remove {
+      width: 44px;
+      min-height: 44px;
+      align-self: stretch;
+      padding: 0;
+      border-width: 0 0 0 1px;
+      border-radius: 0;
+      color: var(--muted);
+      background: transparent;
+      font-size: 1.2rem;
+    }
+    .recent-remove:hover, .recent-clear:hover { color: var(--text); background: var(--surface-soft); }
     body.has-results main { padding-top: clamp(2rem, 5vw, 4rem); }
     body.has-results .intro { display: none; }
     body.has-results .upload-dropzone { min-height: 94px; padding-block: 1rem; }
@@ -526,6 +608,8 @@
       .result-header { align-items: stretch; flex-direction: column; }
       .result-downloads { justify-content: stretch; }
       .result-downloads .download-link { width: 100%; }
+      .recent-header { align-items: stretch; flex-direction: column; }
+      .recent-clear { align-self: flex-start; }
     }
     @media (prefers-reduced-motion: no-preference) {
       .filter-card, button, .download-link { transition: border-color 120ms ease, background 120ms ease, color 120ms ease; }
@@ -716,7 +800,17 @@
         </div>
       </section>
     </div>
-    <p class="privacy-note">The last 20 uploads are held temporarily in memory and cleared when the server restarts. Previews are metadata-free 8-bit JPEGs; downloads use private, short-lived local URLs.</p>
+    <section class="recent-edits" id="recent-edits" aria-labelledby="recent-heading" hidden>
+      <div class="recent-header">
+        <div>
+          <h2 id="recent-heading" tabindex="-1">Recent edits</h2>
+          <p id="recent-description">The latest {{ session_limit }} edits remain in server memory. They expire on restart or eviction and are never saved by the browser.</p>
+        </div>
+        <button class="recent-clear" id="recent-clear" type="button">Clear all</button>
+      </div>
+      <ul class="recent-list" id="recent-list" aria-describedby="recent-description"></ul>
+    </section>
+    <p class="privacy-note">The last {{ session_limit }} uploads are held temporarily in memory and cleared when the server restarts. Previews are metadata-free 8-bit JPEGs; downloads use private, short-lived local URLs.</p>
   </main>
 
   <script type="module">
@@ -786,6 +880,10 @@
     const detailOutputFormat = document.getElementById("detail-output-format");
     const detailFilter = document.getElementById("detail-filter");
     const detailProcessingTime = document.getElementById("detail-processing-time");
+    const recentEdits = document.getElementById("recent-edits");
+    const recentHeading = document.getElementById("recent-heading");
+    const recentList = document.getElementById("recent-list");
+    const recentClear = document.getElementById("recent-clear");
 
     let sessionId = null;
     let applyRequestToken = 0;
@@ -914,6 +1012,130 @@
       window.history.replaceState(null, "", url);
     }
 
+    function resetEditor(message) {
+      sessionId = null;
+      applyRequestToken += 1;
+      autoDefaults = {};
+      editorShell.hidden = true;
+      results.hidden = true;
+      controls.disabled = true;
+      document.body.classList.remove("has-results");
+      updateSessionUrl(null);
+      [beforeImg, afterImg, comparisonBeforeImg, comparisonAfterImg]
+        .forEach((image) => image.removeAttribute("src"));
+      downloadLink.hidden = true;
+      comparisonDownloadLink.hidden = true;
+      setStatus(message);
+    }
+
+    function recentItem(session) {
+      const item = document.createElement("li");
+      item.className = "recent-item";
+
+      const openButton = document.createElement("button");
+      openButton.className = "recent-card";
+      openButton.type = "button";
+      openButton.dataset.recentAction = "open";
+      openButton.dataset.sessionId = session.session_id;
+
+      const thumbnail = document.createElement("img");
+      thumbnail.className = "recent-thumb";
+      thumbnail.src = session.thumbnail;
+      thumbnail.alt = "";
+      thumbnail.loading = "lazy";
+
+      const copy = document.createElement("span");
+      copy.className = "recent-copy";
+      const name = document.createElement("span");
+      name.className = "recent-name";
+      name.textContent = session.name;
+      const meta = document.createElement("span");
+      meta.className = "recent-meta";
+      meta.textContent = `${session.look} · ${session.dimensions}`;
+      copy.append(name, meta);
+      if (session.session_id === sessionId) {
+        openButton.setAttribute("aria-current", "true");
+        const current = document.createElement("span");
+        current.className = "recent-current";
+        current.textContent = "Current edit";
+        copy.append(current);
+      }
+      openButton.append(thumbnail, copy);
+
+      const removeButton = document.createElement("button");
+      removeButton.className = "recent-remove";
+      removeButton.type = "button";
+      removeButton.dataset.recentAction = "remove";
+      removeButton.dataset.sessionId = session.session_id;
+      removeButton.setAttribute("aria-label", `Remove ${session.name} from recent edits`);
+      removeButton.textContent = "×";
+      item.append(openButton, removeButton);
+      return item;
+    }
+
+    function renderRecentSessions(sessions) {
+      recentList.replaceChildren(...sessions.map(recentItem));
+      recentEdits.hidden = sessions.length === 0;
+    }
+
+    async function loadRecentSessions() {
+      try {
+        const response = await fetch("/sessions");
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Could not load recent edits.");
+        renderRecentSessions(data.sessions);
+      } catch (_error) {
+        recentEdits.hidden = true;
+      }
+    }
+
+    let recentRefreshTimer = null;
+    function scheduleRecentRefresh() {
+      clearTimeout(recentRefreshTimer);
+      recentRefreshTimer = setTimeout(loadRecentSessions, 350);
+    }
+
+    async function openRecentSession(id) {
+      setStatus("Opening recent edit…");
+      try {
+        const response = await fetch(`/sessions/${encodeURIComponent(id)}`);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "That recent edit expired.");
+        renderSession(data, true);
+        updateSessionUrl(id);
+        setStatus(`${data.download_name} restored.`);
+        scheduleRecentRefresh();
+      } catch (error) {
+        showError(error.message, true);
+        setStatus("");
+        await loadRecentSessions();
+      }
+    }
+
+    async function removeRecentSession(id) {
+      const removedCurrent = id === sessionId;
+      const response = await fetch(`/sessions/${encodeURIComponent(id)}`, { method: "DELETE" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not remove that edit.");
+      if (removedCurrent) {
+        resetEditor("Current edit removed from memory.");
+        filePicker.focus();
+      } else {
+        setStatus("Recent edit removed from memory.");
+      }
+      await loadRecentSessions();
+      if (!removedCurrent && !recentEdits.hidden) recentHeading.focus();
+    }
+
+    async function clearRecentSessions() {
+      const response = await fetch("/sessions", { method: "DELETE" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not clear recent edits.");
+      resetEditor(`${data.removed} recent ${data.removed === 1 ? "edit" : "edits"} cleared from memory.`);
+      renderRecentSessions([]);
+      filePicker.focus();
+    }
+
     function updateFilterPreviews(id) {
       filterPreviews.forEach((preview) => {
         preview.classList.remove("is-ready");
@@ -978,6 +1200,7 @@
         if (uploadInProgress || (sessionId && sessionId !== savedSessionId)) return;
         renderSession(data);
         setStatus("Previous result restored.");
+        scheduleRecentRefresh();
       } catch (_error) {
         if (sessionId && sessionId !== savedSessionId) return;
         updateSessionUrl(null);
@@ -1034,6 +1257,7 @@
         renderSession(data, true);
         updateSessionUrl(data.session_id);
         setStatus("Done. Try a filter below.");
+        void loadRecentSessions();
       } catch (err) {
         showError(err.message, true);
         setStatus("");
@@ -1104,6 +1328,7 @@
           : `After — ${activeLookName()}`;
         updateResult(data);
         setStatus("");
+        scheduleRecentRefresh();
       } catch (err) {
         if (token === applyRequestToken) {
           showError(err.message);
@@ -1161,7 +1386,24 @@
     comparisonControls.hidden = false;
     setComparisonView("slider");
     updateComparisonPosition();
-    restoreSession();
+    void loadRecentSessions();
+    void restoreSession();
+
+    recentList.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-recent-action]");
+      if (!button) return;
+      const id = button.dataset.sessionId;
+      const action = button.dataset.recentAction;
+      if (action === "open") {
+        void openRecentSession(id);
+      } else if (action === "remove") {
+        void removeRecentSession(id).catch((error) => showError(error.message, true));
+      }
+    });
+
+    recentClear.addEventListener("click", () => {
+      void clearRecentSessions().catch((error) => showError(error.message, true));
+    });
 
     presetRadios.forEach((radio) => {
       radio.addEventListener("change", () => {
