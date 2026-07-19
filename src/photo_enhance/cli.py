@@ -8,6 +8,7 @@ import click
 import cv2
 from PIL import Image, UnidentifiedImageError
 
+from photo_enhance.comparison import build_comparison
 from photo_enhance.imageio_utils import is_supported_image, load_bgr, save_bgr
 from photo_enhance.nature import NatureSettings
 from photo_enhance.pipeline import EnhancementError, EnhancementOptions, enhance_image
@@ -64,6 +65,10 @@ def _output_path(
     return result.with_suffix(OUTPUT_FORMAT_SUFFIXES[output_format]) if output_format else result
 
 
+def _comparison_path(output_path: Path) -> Path:
+    return output_path.with_name(f"{output_path.stem}_before-after.jpg")
+
+
 def _print_presets(preset_dir: Path | None = None) -> None:
     """Print stable preset IDs alongside the names and descriptions people see in the UI."""
     for preset in list_preset_choices(preset_dir):
@@ -95,6 +100,9 @@ def _process_one(
     white_balance: bool = True,
     levels: bool = True,
     local_contrast: bool = True,
+    comparison_path: Path | None = None,
+    comparison_layout: str = "horizontal",
+    comparison_size: int = 2400,
 ) -> None:
     img, metadata = load_bgr(input_path)
     defaults = preset.get("defaults", {}) if preset is not None else {}
@@ -144,6 +152,14 @@ def _process_one(
         metadata=None if strip_metadata else metadata,
         quality=quality,
     )
+    if comparison_path is not None:
+        comparison = build_comparison(
+            img,
+            result.image,
+            layout=comparison_layout,
+            max_panel_dimension=comparison_size,
+        )
+        save_bgr(comparison_path, comparison, metadata=None, quality=92)
 
 
 @click.command()
@@ -243,6 +259,27 @@ def _process_one(
     help="Emit one machine-readable JSON result instead of normal status lines.",
 )
 @click.option(
+    "--comparison",
+    is_flag=True,
+    default=False,
+    help="Also write a labeled before/after comparison JPEG.",
+)
+@click.option(
+    "--comparison-layout",
+    type=click.Choice(("horizontal", "vertical")),
+    default="horizontal",
+    show_default=True,
+    help="Arrange the comparison panels side by side or stacked.",
+)
+@click.option(
+    "--comparison-size",
+    type=click.IntRange(320, 8000),
+    default=2400,
+    show_default=True,
+    metavar="PIXELS",
+    help="Maximum width or height of each comparison panel.",
+)
+@click.option(
     "-v",
     "--verbose",
     is_flag=True,
@@ -268,6 +305,9 @@ def main(
     list_presets_requested: bool,
     dry_run: bool,
     json_summary: bool,
+    comparison: bool,
+    comparison_layout: str,
+    comparison_size: int,
     verbose: bool,
 ) -> None:
     """Auto-enhance a photo (or a folder of photos with --batch)."""
@@ -343,18 +383,28 @@ def main(
                 input_root=input_path if recursive and output is not None else None,
                 output_format=output_format,
             )
-            if out_path.exists() and not overwrite:
+            comparison_out = _comparison_path(out_path) if comparison else None
+            existing_path = next(
+                (path for path in (out_path, comparison_out) if path is not None and path.exists()),
+                None,
+            )
+            if existing_path is not None and not overwrite:
                 skipped += 1
                 items.append(
                     {
                         "input": str(file_path),
                         "output": str(out_path),
+                        **(
+                            {"comparison": str(comparison_out)}
+                            if comparison_out is not None
+                            else {}
+                        ),
                         "status": "skipped",
                         "error": "output already exists",
                     }
                 )
                 _echo_batch(
-                    f"SKIP {file_path.name} (output already exists: {out_path})",
+                    f"SKIP {file_path.name} (output already exists: {existing_path})",
                     index=index,
                     total=len(files),
                     json_summary=json_summary,
@@ -366,11 +416,17 @@ def main(
                     {
                         "input": str(file_path),
                         "output": str(out_path),
+                        **(
+                            {"comparison": str(comparison_out)}
+                            if comparison_out is not None
+                            else {}
+                        ),
                         "status": "planned",
                     }
                 )
                 _echo_batch(
-                    f"DRY  {file_path.name} -> {out_path}",
+                    f"DRY  {file_path.name} -> {out_path}"
+                    + (f" + {comparison_out}" if comparison_out is not None else ""),
                     index=index,
                     total=len(files),
                     json_summary=json_summary,
@@ -387,17 +443,26 @@ def main(
                     white_balance=white_balance,
                     levels=levels,
                     local_contrast=local_contrast,
+                    comparison_path=comparison_out,
+                    comparison_layout=comparison_layout,
+                    comparison_size=comparison_size,
                 )
                 processed += 1
                 items.append(
                     {
                         "input": str(file_path),
                         "output": str(out_path),
+                        **(
+                            {"comparison": str(comparison_out)}
+                            if comparison_out is not None
+                            else {}
+                        ),
                         "status": "processed",
                     }
                 )
                 _echo_batch(
-                    f"OK   {file_path.name} -> {out_path}",
+                    f"OK   {file_path.name} -> {out_path}"
+                    + (f" + {comparison_out}" if comparison_out is not None else ""),
                     index=index,
                     total=len(files),
                     json_summary=json_summary,
@@ -412,6 +477,11 @@ def main(
                     {
                         "input": str(file_path),
                         "output": str(out_path),
+                        **(
+                            {"comparison": str(comparison_out)}
+                            if comparison_out is not None
+                            else {}
+                        ),
                         "status": "failed",
                         "error": str(exc),
                     }
@@ -446,14 +516,19 @@ def main(
             is_batch=False,
             output_format=output_format,
         )
+        comparison_out = _comparison_path(out_path) if comparison else None
         if out_path.resolve() == input_path.resolve() and not overwrite:
             raise click.UsageError(
                 "Output path is the same as the input file, which would overwrite the original. "
                 "Pass --overwrite to allow this, or choose a different -o."
             )
-        if out_path.exists() and not overwrite:
+        existing_path = next(
+            (path for path in (out_path, comparison_out) if path is not None and path.exists()),
+            None,
+        )
+        if existing_path is not None and not overwrite:
             raise click.UsageError(
-                f"Output already exists: {out_path}. Pass --overwrite to replace it, "
+                f"Output already exists: {existing_path}. Pass --overwrite to replace it, "
                 "or choose a different -o."
             )
         if dry_run:
@@ -463,11 +538,19 @@ def main(
                         "mode": "single",
                         "input": str(input_path),
                         "output": str(out_path),
+                        **(
+                            {"comparison": str(comparison_out)}
+                            if comparison_out is not None
+                            else {}
+                        ),
                         "status": "planned",
                     }
                 )
             else:
-                click.echo(f"DRY  {input_path.name} -> {out_path}")
+                click.echo(
+                    f"DRY  {input_path.name} -> {out_path}"
+                    + (f" + {comparison_out}" if comparison_out is not None else "")
+                )
             return
         try:
             _process_one(
@@ -480,6 +563,9 @@ def main(
                 white_balance=white_balance,
                 levels=levels,
                 local_contrast=local_contrast,
+                comparison_path=comparison_out,
+                comparison_layout=comparison_layout,
+                comparison_size=comparison_size,
             )
         except KeyboardInterrupt:
             if not json_summary:
@@ -493,11 +579,15 @@ def main(
                     "mode": "single",
                     "input": str(input_path),
                     "output": str(out_path),
+                    **({"comparison": str(comparison_out)} if comparison_out is not None else {}),
                     "status": "processed",
                 }
             )
         else:
-            click.echo(f"OK   {input_path.name} -> {out_path}")
+            click.echo(
+                f"OK   {input_path.name} -> {out_path}"
+                + (f" + {comparison_out}" if comparison_out is not None else "")
+            )
 
 
 if __name__ == "__main__":

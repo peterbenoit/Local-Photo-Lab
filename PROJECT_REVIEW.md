@@ -133,7 +133,7 @@ P2 improves product quality; P3 contains larger, optional capabilities.
 
 - [ ] Add RAW import with `rawpy` behind an optional extra, including camera white-balance selection and documented demosaic/output behavior.
 - [ ] Add `.cube` LUT import with parser validation, color-space documentation, and interpolation tests.
-- [ ] Add side-by-side comparison export to the CLI with labels and configurable layout.
+- [x] Add side-by-side comparison export to the CLI with labels and configurable layout.
 - [ ] Evaluate a conservative denoise/sharpen stage separately from exposure and color correction; keep it opt-in until quality data supports a default.
 - [ ] Evaluate an optional Real-ESRGAN integration as a separate extra/process so the classical CPU-only MVP stays lightweight.
 - [ ] Add a non-destructive recipe/manifest export so an enhancement can be reproduced later from the original.

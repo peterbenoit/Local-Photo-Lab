@@ -25,6 +25,7 @@ from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.utils import secure_filename
 
 from photo_enhance.auto_levels import AutoSettings
+from photo_enhance.comparison import build_comparison
 from photo_enhance.imageio_utils import UnsupportedImageError, load_bgr_bytes
 from photo_enhance.nature import NatureSettings, apply_nature_adjustments
 from photo_enhance.pipeline import EnhancementError, EnhancementOptions, enhance_image
@@ -170,42 +171,10 @@ def _comparison_jpeg(before_jpeg: bytes, after_jpeg: bytes) -> bytes:
     after = cv2.imdecode(np.frombuffer(after_jpeg, dtype=np.uint8), cv2.IMREAD_COLOR)
     if before is None or after is None:
         raise ValueError("Could not decode comparison images")
-    if before.shape[:2] != after.shape[:2]:
-        after = cv2.resize(after, (before.shape[1], before.shape[0]), interpolation=cv2.INTER_AREA)
-
-    height, width = before.shape[:2]
-    scale = min(1.0, COMPARISON_PANEL_MAX_DIMENSION / max(height, width))
-    if scale < 1.0:
-        panel_size = (max(1, round(width * scale)), max(1, round(height * scale)))
-        before = cv2.resize(before, panel_size, interpolation=cv2.INTER_AREA)
-        after = cv2.resize(after, panel_size, interpolation=cv2.INTER_AREA)
-        height, width = before.shape[:2]
-
-    header_height = 48
-    gap = 12
-    canvas = np.full((height + header_height, width * 2 + gap, 3), (15, 17, 20), dtype=np.uint8)
-    canvas[header_height:, :width] = before
-    canvas[header_height:, width + gap :] = after
-    label_color = (234, 242, 245)
-    cv2.putText(
-        canvas,
-        "BEFORE",
-        (14, 32),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.65,
-        label_color,
-        2,
-        cv2.LINE_AA,
-    )
-    cv2.putText(
-        canvas,
-        "AFTER",
-        (width + gap + 14, 32),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.65,
-        label_color,
-        2,
-        cv2.LINE_AA,
+    canvas = build_comparison(
+        before,
+        after,
+        max_panel_dimension=COMPARISON_PANEL_MAX_DIMENSION,
     )
     return _bgr_to_jpeg_bytes(canvas)
 

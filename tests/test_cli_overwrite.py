@@ -45,6 +45,65 @@ def test_single_file_writes_custom_output(tmp_path):
         assert saved.format == "WEBP"
 
 
+def test_single_file_can_export_horizontal_before_after_comparison(tmp_path):
+    photo = tmp_path / "photo.jpg"
+    output = tmp_path / "enhanced.png"
+    _write_test_image(photo)
+
+    result = CliRunner().invoke(
+        main,
+        [str(photo), "-o", str(output), "--comparison"],
+    )
+
+    comparison = tmp_path / "enhanced_before-after.jpg"
+    assert result.exit_code == 0
+    assert comparison.is_file()
+    with Image.open(comparison) as saved:
+        assert saved.format == "JPEG"
+        assert saved.size == (44, 64)
+
+
+def test_comparison_export_supports_vertical_layout(tmp_path):
+    photo = tmp_path / "photo.jpg"
+    output = tmp_path / "enhanced.jpg"
+    _write_test_image(photo)
+
+    result = CliRunner().invoke(
+        main,
+        [
+            str(photo),
+            "-o",
+            str(output),
+            "--comparison",
+            "--comparison-layout",
+            "vertical",
+        ],
+    )
+
+    comparison = tmp_path / "enhanced_before-after.jpg"
+    assert result.exit_code == 0
+    with Image.open(comparison) as saved:
+        assert saved.size == (16, 140)
+
+
+def test_comparison_collision_is_protected_before_processing(tmp_path):
+    photo = tmp_path / "photo.jpg"
+    output = tmp_path / "enhanced.jpg"
+    comparison = tmp_path / "enhanced_before-after.jpg"
+    _write_test_image(photo)
+    comparison.write_bytes(b"keep me")
+
+    result = CliRunner().invoke(
+        main,
+        [str(photo), "-o", str(output), "--comparison"],
+    )
+
+    assert result.exit_code == 2
+    assert str(comparison) in result.output
+    assert not output.exists()
+    assert comparison.read_bytes() == b"keep me"
+
+
 def test_output_format_rewrites_extension_and_encodes_requested_format(tmp_path):
     photo = tmp_path / "photo.jpg"
     requested = tmp_path / "export.anything"

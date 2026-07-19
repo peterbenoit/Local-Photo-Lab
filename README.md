@@ -117,6 +117,9 @@ uv run photo-enhance path/to/folder --batch -o path/to/output_folder --dry-run
 # Include nested folders and recreate their relative structure under the output
 uv run photo-enhance path/to/folder --batch --recursive -o path/to/output_folder
 
+# Also export a labeled side-by-side JPEG for each enhanced photo
+uv run photo-enhance path/to/folder --batch -o path/to/output_folder --comparison
+
 # Return one JSON batch result for a script instead of human status lines
 uv run photo-enhance path/to/folder --batch -o path/to/output_folder --json-summary
 ```
@@ -174,6 +177,12 @@ photo's temporary output.
 Add `--verbose` to log one structured `key=value` recipe line per processed
 photo, including the exact Auto/nature strengths and the color-cast and
 neutral-pixel measurements that informed them. Normal CLI output stays concise.
+
+`--comparison` writes a separate metadata-free JPEG named
+`*_before-after.jpg`. Use `--comparison-layout horizontal|vertical` to choose
+side-by-side or stacked panels and `--comparison-size` to bound each panel's
+longest dimension. Comparison files follow the same dry-run, JSON-summary,
+collision, and overwrite rules as enhanced outputs.
 
 ## Supported image contract
 

@@ -2,6 +2,16 @@
 
 All notable changes to this project are logged here, newest first.
 
+## 2026-07-19 — CLI comparison exports
+
+- Added `--comparison` to write a labeled, metadata-free before/after JPEG next
+  to each enhanced CLI output, including batch and recursive processing.
+- Added horizontal and vertical layouts plus a configurable per-panel size;
+  comparison paths participate in dry runs, JSON summaries, collision checks,
+  and explicit overwrite behavior.
+- Moved comparison rendering into a shared implementation used by both the CLI
+  export and web download paths.
+
 ## 2026-07-19 — Recent edits tray
 
 - Added a recent-edits tray showing the newest surviving in-memory sessions
