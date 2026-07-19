@@ -248,6 +248,40 @@
       border-color: var(--accent);
       color: var(--accent-strong);
     }
+    .editor-guide {
+      margin-bottom: 1rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface-soft);
+    }
+    .editor-guide summary {
+      min-height: 44px;
+      padding: 0.7rem 0.8rem;
+      color: var(--accent-strong);
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 800;
+    }
+    .guide-content {
+      padding: 0 0.8rem 0.85rem;
+      color: var(--muted);
+      font-size: 0.76rem;
+      line-height: 1.45;
+    }
+    .guide-content > :first-child { margin-top: 0; }
+    .guide-content h3 {
+      margin: 1rem 0 0.35rem;
+      color: var(--text);
+      font-size: 0.78rem;
+    }
+    .guide-content ul { margin: 0; padding-left: 1.1rem; }
+    .guide-content li + li { margin-top: 0.35rem; }
+    .guide-content strong { color: var(--text); }
+    .context-help {
+      margin: 0.3rem 0 0.75rem;
+      font-size: 0.72rem;
+    }
+    .context-help a { color: var(--accent-strong); }
     .filter-strip {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -673,6 +707,46 @@
           <button class="reset-action reset-action-primary" id="reset-auto-button" type="button">Reset to Auto</button>
           <button class="reset-action" id="reset-all-button" type="button">Reset all</button>
         </div>
+        <details class="editor-guide" id="editor-guide">
+          <summary>New here? How to choose</summary>
+          <div class="guide-content">
+            <p><strong>Start with Auto.</strong> If the photo looks balanced, you may already be done. Choose a filter when it suits the subject or the mood you want, then use sliders to fix one problem at a time.</p>
+            <h3 id="guide-filters" tabindex="-1">Choose a starting look</h3>
+            <ul>
+              <li><strong>Auto:</strong> a natural correction for most photos.</li>
+              <li><strong>Bird Natural:</strong> faithful color and gentle detail for most bird photos.</li>
+              <li><strong>Feather Detail:</strong> extra fine structure when plumage looks soft.</li>
+              <li><strong>Backlit Bird:</strong> a shaded bird against bright sky or rim light.</li>
+              <li><strong>Woodland or Overcast:</strong> birds in dense green surroundings or flat, cool daylight.</li>
+              <li><strong>Soft Portrait:</strong> gentler contrast and warmth for people.</li>
+              <li><strong>Warm Film or Golden Hour:</strong> warmth and glow for sunsets, travel, and outdoor scenes.</li>
+              <li><strong>Other creative looks:</strong> use them for mood. Lower Intensity when the effect overwhelms the photo.</li>
+            </ul>
+            <h3 id="guide-auto" tabindex="-1">Correct the overall image</h3>
+            <ul>
+              <li><strong>White balance:</strong> reduce an unwanted blue, yellow, green, or magenta cast.</li>
+              <li><strong>Levels:</strong> add tonal range when the whole photo looks flat.</li>
+              <li><strong>Local contrast:</strong> add definition without making the entire image much darker or brighter.</li>
+            </ul>
+            <h3 id="guide-nature" tabindex="-1">Fix a specific problem</h3>
+            <ul>
+              <li><strong>Shadows:</strong> reveal a subject that is too dark.</li>
+              <li><strong>Highlight recovery:</strong> pull detail back from bright sky, snow, or pale feathers.</li>
+              <li><strong>Vibrance:</strong> restore weak color without pushing every color equally.</li>
+              <li><strong>Feather detail:</strong> sharpen fine texture. Use less on faces and noisy photos.</li>
+              <li><strong>Noise reduction:</strong> smooth grainy low-light areas. Apply it before adding more detail.</li>
+            </ul>
+            <h3 id="guide-finishing" tabindex="-1">Add finishing touches</h3>
+            <ul>
+              <li><strong>Warmth:</strong> shift the mood warmer or cooler.</li>
+              <li><strong>Fade:</strong> soften blacks and contrast for a matte look.</li>
+              <li><strong>Vignette:</strong> darken the edges to guide attention toward the subject.</li>
+              <li><strong>Film grain:</strong> add visible texture for a film-like finish.</li>
+            </ul>
+            <p><strong>Keep changes small.</strong> Compare with the original after each fix. If the adjustment is the first thing you notice, back it down.</p>
+          </div>
+        </details>
+        <p class="context-help"><a href="#guide-filters" data-guide-target="guide-filters">Which filter should I use?</a></p>
         <div class="filter-strip" id="filter-strip">
           <h3 class="filter-group-title">Nature &amp; wildlife</h3>
           <div class="filter-option">
@@ -716,6 +790,7 @@
         <div class="finishing-controls" aria-labelledby="auto-corrections-heading">
           <h3 id="auto-corrections-heading">Auto corrections</h3>
           <p class="finishing-note" id="auto-analysis-summary">Auto analyzes the source and sets these controls to the values used.</p>
+          <p class="context-help"><a href="#guide-auto" data-guide-target="guide-auto">What do these corrections fix?</a></p>
           <div class="finish-control">
             <label class="intensity-heading" for="auto-white-balance-slider">White balance <span id="auto-white-balance-value">0%</span></label>
             <input class="control-slider" type="range" id="auto-white-balance-slider" min="0" max="100" value="0">
@@ -732,6 +807,7 @@
         <div class="finishing-controls" aria-labelledby="nature-heading">
           <h3 id="nature-heading">Nature adjustments</h3>
           <p class="finishing-note">Recover difficult light and bring out natural color and feather structure.</p>
+          <p class="context-help"><a href="#guide-nature" data-guide-target="guide-nature">Which adjustment fixes what?</a></p>
           <div class="finish-control">
             <label class="intensity-heading" for="shadows-slider">Shadows <span id="shadows-value">0%</span></label>
             <input class="control-slider" type="range" id="shadows-slider" min="0" max="100" value="0">
@@ -756,6 +832,7 @@
         <div class="finishing-controls" aria-labelledby="finishing-heading">
           <h3 id="finishing-heading">Finishing touches</h3>
           <p class="finishing-note">Optional effects applied after the selected look.</p>
+          <p class="context-help"><a href="#guide-finishing" data-guide-target="guide-finishing">When should I use these?</a></p>
           <div class="finish-control">
             <label class="intensity-heading" for="temperature-slider">Warmth <span id="temperature-value">Neutral</span></label>
             <input class="control-slider" type="range" id="temperature-slider" min="-100" max="100" value="0">
@@ -908,6 +985,8 @@
     const recentClear = document.getElementById("recent-clear");
     const resetAutoButton = document.getElementById("reset-auto-button");
     const resetAllButton = document.getElementById("reset-all-button");
+    const editorGuide = document.getElementById("editor-guide");
+    const guideLinks = Array.from(document.querySelectorAll("[data-guide-target]"));
 
     let sessionId = null;
     let applyRequestToken = 0;
@@ -1453,6 +1532,16 @@
 
     recentClear.addEventListener("click", () => {
       void clearRecentSessions().catch((error) => showError(error.message, true));
+    });
+
+    guideLinks.forEach((link) => {
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        editorGuide.open = true;
+        const target = document.getElementById(link.dataset.guideTarget);
+        target.focus();
+        target.scrollIntoView({ block: "nearest" });
+      });
     });
 
     resetAutoButton.addEventListener("click", () => {

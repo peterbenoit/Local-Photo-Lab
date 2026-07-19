@@ -126,6 +126,27 @@ def test_index_has_reset_actions_for_auto_recipe_and_uncorrected_source():
     assert "All adjustments reset. Showing the uncorrected source." in text
 
 
+def test_index_has_beginner_filter_and_adjustment_guide():
+    client = app.test_client()
+    text = client.get("/").get_data(as_text=True)
+
+    assert '<details class="editor-guide" id="editor-guide">' in text
+    assert "<summary>New here? How to choose</summary>" in text
+    assert "<strong>Start with Auto.</strong>" in text
+    assert "Bird Natural:" in text
+    assert "Backlit Bird:" in text
+    assert "White balance:" in text
+    assert "Highlight recovery:" in text
+    assert "Noise reduction:" in text
+    assert "Compare with the original after each fix." in text
+    assert 'href="#guide-filters" data-guide-target="guide-filters"' in text
+    assert 'href="#guide-auto" data-guide-target="guide-auto"' in text
+    assert 'href="#guide-nature" data-guide-target="guide-nature"' in text
+    assert 'href="#guide-finishing" data-guide-target="guide-finishing"' in text
+    assert "editorGuide.open = true" in text
+    assert "target.focus()" in text
+
+
 def test_upload_without_file_returns_400():
     client = app.test_client()
     resp = client.post("/upload", data={})

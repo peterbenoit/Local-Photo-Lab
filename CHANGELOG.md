@@ -2,6 +2,25 @@
 
 All notable changes to this project are logged here, newest first.
 
+## 2026-07-19 — Beginner editor guide
+
+- Added a compact, collapsible guide that gives newcomers a practical starting
+  workflow and recommends filters for common subjects and lighting conditions.
+- Explained which overall, nature, and finishing adjustments address common
+  photo problems, including color casts, flat tones, difficult light, noise,
+  softness, and distracting edges.
+- Added contextual links beside filters and each adjustment group. Opening a
+  topic expands the guide and moves focus to the requested section.
+- Added focused regression coverage and marked the roadmap item complete.
+
+## 2026-07-19 — Beginner editor guidance roadmap
+
+- Added lightweight, in-editor beginner guidance to the visible product roadmap.
+- Scoped the guidance around choosing filters by photo type, using adjustments
+  for common fixes, and following a simple Auto-to-targeted-adjustments workflow.
+- Prioritized a nearby help entry point and contextual links over an extensive
+  standalone tutorial.
+
 ## 2026-07-19 — Editor reset actions
 
 - Added visible **Reset to Auto** and **Reset all** actions to the editor.
