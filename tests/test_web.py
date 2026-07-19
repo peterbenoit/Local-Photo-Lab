@@ -90,7 +90,7 @@ def test_index_has_progressive_dropzone_and_keyboard_comparison_controls():
     assert "loadPresetDefaults(selectedPresetId())" in text
     assert "const LIVE_UPDATE_INTERVAL = 250" in text
     assert "adjustmentInFlight" in text
-    assert "await applyFilter()" in text
+    assert "await applyFilter(successMessage)" in text
     assert "adjustmentDebounce" not in text
     assert 'comparisonRange.addEventListener("input"' in text
     assert "async function restoreSession()" in text
@@ -108,6 +108,22 @@ def test_index_has_ephemeral_recent_edits_controls():
     assert "never saved by the browser" in text
     assert 'recentList.addEventListener("click"' in text
     assert 'event.target.closest("[data-recent-action]")' in text
+
+
+def test_index_has_reset_actions_for_auto_recipe_and_uncorrected_source():
+    client = app.test_client()
+    text = client.get("/").get_data(as_text=True)
+
+    assert 'class="reset-actions" role="group" aria-label="Reset adjustments"' in text
+    assert 'id="reset-auto-button" type="button">Reset to Auto</button>' in text
+    assert 'id="reset-all-button" type="button">Reset all</button>' in text
+    assert 'resetAutoButton.addEventListener("click"' in text
+    assert 'loadPresetDefaults("")' in text
+    assert 'resetAllButton.addEventListener("click"' in text
+    assert "function clearAllAdjustments()" in text
+    assert "slider.value = 0" in text
+    assert 'scheduleAdjustment(true, "Auto recommendation restored.")' in text
+    assert "All adjustments reset. Showing the uncorrected source." in text
 
 
 def test_upload_without_file_returns_400():

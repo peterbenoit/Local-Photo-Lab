@@ -59,7 +59,7 @@ metrics prevent the observed regressions without pretending to score beauty.
 These are the highest-value visible product additions not represented by the
 old backlog.
 
-1. [ ] Add clear **Reset to Auto** and **Reset all** actions. Reset must restore
+1. [x] Add clear **Reset to Auto** and **Reset all** actions. Reset restores
    the analyzed recommendation without re-uploading the source.
 2. [ ] Add session-scoped undo and redo for adjustment changes. Start with a
    bounded in-memory recipe history; do not duplicate full-resolution pixels.

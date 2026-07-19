@@ -2,6 +2,15 @@
 
 All notable changes to this project are logged here, newest first.
 
+## 2026-07-19 — Editor reset actions
+
+- Added visible **Reset to Auto** and **Reset all** actions to the editor.
+- Reset to Auto restores the source-specific analyzed recommendation without a
+  new upload; Reset all returns every correction and finishing control to zero.
+- Reset requests use the existing coalesced, revision-ordered apply path and
+  announce successful completion through the editor status message.
+- Added focused regression coverage and marked the roadmap item complete.
+
 ## 2026-07-19 — Product roadmap re-evaluation
 
 - Replaced the original audit-style backlog with a roadmap grounded in the

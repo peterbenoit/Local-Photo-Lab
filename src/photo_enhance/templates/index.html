@@ -230,6 +230,24 @@
       letter-spacing: 0.13em;
       text-transform: uppercase;
     }
+    .reset-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.55rem;
+      margin-bottom: 1rem;
+    }
+    .reset-action {
+      min-height: 44px;
+      padding: 0.55rem 0.65rem;
+      border-color: var(--border-strong);
+      background: transparent;
+      color: var(--text);
+      font-size: 0.76rem;
+    }
+    .reset-action-primary {
+      border-color: var(--accent);
+      color: var(--accent-strong);
+    }
     .filter-strip {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -651,6 +669,10 @@
     <div class="editor-shell" id="editor-shell" hidden>
       <fieldset class="controls-panel" id="controls" disabled>
         <legend>Choose a look</legend>
+        <div class="reset-actions" role="group" aria-label="Reset adjustments">
+          <button class="reset-action reset-action-primary" id="reset-auto-button" type="button">Reset to Auto</button>
+          <button class="reset-action" id="reset-all-button" type="button">Reset all</button>
+        </div>
         <div class="filter-strip" id="filter-strip">
           <h3 class="filter-group-title">Nature &amp; wildlife</h3>
           <div class="filter-option">
@@ -884,6 +906,8 @@
     const recentHeading = document.getElementById("recent-heading");
     const recentList = document.getElementById("recent-list");
     const recentClear = document.getElementById("recent-clear");
+    const resetAutoButton = document.getElementById("reset-auto-button");
+    const resetAllButton = document.getElementById("reset-all-button");
 
     let sessionId = null;
     let applyRequestToken = 0;
@@ -975,6 +999,32 @@
         autoLevelsSlider.value = autoDefaults.auto_levels ?? 0;
         autoLocalContrastSlider.value = autoDefaults.auto_local_contrast ?? 0;
       }
+      updateAdjustmentLabels();
+    }
+
+    function selectAutoPreset() {
+      const autoPreset = presetRadios.find((radio) => radio.value === "");
+      autoPreset.checked = true;
+    }
+
+    function clearAllAdjustments() {
+      intensitySlider.value = 100;
+      [
+        temperatureSlider,
+        fadeSlider,
+        vignetteSlider,
+        grainSlider,
+        shadowsSlider,
+        highlightsSlider,
+        vibranceSlider,
+        detailSlider,
+        denoiseSlider,
+        autoWhiteBalanceSlider,
+        autoLevelsSlider,
+        autoLocalContrastSlider,
+      ].forEach((slider) => {
+        slider.value = 0;
+      });
       updateAdjustmentLabels();
     }
 
@@ -1271,7 +1321,7 @@
       }
     }
 
-    async function applyFilter() {
+    async function applyFilter(successMessage = "") {
       if (!sessionId) return;
       showError("");
 
@@ -1327,7 +1377,7 @@
           ? "After"
           : `After — ${activeLookName()}`;
         updateResult(data);
-        setStatus("");
+        setStatus(successMessage);
         scheduleRecentRefresh();
       } catch (err) {
         if (token === applyRequestToken) {
@@ -1405,6 +1455,20 @@
       void clearRecentSessions().catch((error) => showError(error.message, true));
     });
 
+    resetAutoButton.addEventListener("click", () => {
+      selectAutoPreset();
+      loadPresetDefaults("");
+      updatePresetDescription();
+      scheduleAdjustment(true, "Auto recommendation restored.");
+    });
+
+    resetAllButton.addEventListener("click", () => {
+      selectAutoPreset();
+      clearAllAdjustments();
+      updatePresetDescription();
+      scheduleAdjustment(true, "All adjustments reset. Showing the uncorrected source.");
+    });
+
     presetRadios.forEach((radio) => {
       radio.addEventListener("change", () => {
         loadPresetDefaults(selectedPresetId());
@@ -1418,6 +1482,7 @@
     let adjustmentInFlight = false;
     let adjustmentQueued = false;
     let lastAdjustmentStartedAt = 0;
+    let pendingApplyStatus = "";
 
     async function flushAdjustment() {
       adjustmentTimer = null;
@@ -1426,16 +1491,19 @@
       adjustmentQueued = false;
       adjustmentInFlight = true;
       lastAdjustmentStartedAt = performance.now();
+      const successMessage = pendingApplyStatus;
+      pendingApplyStatus = "";
       try {
-        await applyFilter();
+        await applyFilter(successMessage);
       } finally {
         adjustmentInFlight = false;
-        if (adjustmentQueued) scheduleAdjustment();
+        if (adjustmentQueued) scheduleAdjustment(false, pendingApplyStatus);
       }
     }
 
-    function scheduleAdjustment(immediate = false) {
+    function scheduleAdjustment(immediate = false, successMessage = "") {
       adjustmentQueued = true;
+      pendingApplyStatus = successMessage;
       if (adjustmentInFlight) return;
 
       clearTimeout(adjustmentTimer);
