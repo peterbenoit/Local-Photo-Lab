@@ -2,6 +2,15 @@
 
 All notable changes to this project are logged here, newest first.
 
+## 2026-07-19 — Slider controls evaluation backlog
+
+- Added a high-priority roadmap item to evaluate alternatives to the editor's
+  current adjustment sliders before committing to a replacement pattern.
+- Scoped the evaluation around precision, scanability, reset/default controls,
+  direct values, named or stepped choices, and continuous ranges where useful.
+- Required the preferred approach to work with pointer, keyboard, touch, and
+  narrow-screen layouts before implementation.
+
 ## 2026-07-19 — Beginner editor guide
 
 - Added a compact, collapsible guide that gives newcomers a practical starting
